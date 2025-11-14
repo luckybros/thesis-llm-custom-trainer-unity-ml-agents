@@ -12,9 +12,10 @@ class LLMUtils:
         """
         Evaluate KL distance between two distributions
         """
-
         d1 = Categorical(logits=d1)
-        d2 = Categorical(logits=d2)
+
+        with torch.no_grad():
+            d2 = Categorical(logits=d2)
 
         kl_loss = torch.distributions.kl_divergence(d1, d2).mean()
 
