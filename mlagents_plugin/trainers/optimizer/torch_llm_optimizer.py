@@ -1,3 +1,4 @@
+from typing import Dict
 from mlagents.trainers.ppo.optimizer import TorchPPOOptimizer
 from mlagents.trainers.settings import (
     TrainerSettings,
@@ -12,6 +13,7 @@ from mlagents.trainers.trajectory import ObsUtil
 from mlagents_envs.timers import timed
 from mlagents.torch_utils import torch, default_device
 from mlagents.trainers.torch_entities.action_log_probs import ActionLogProbs
+from mlagents_plugin.utils.llm_utils import LLMUtils
 
 
 class TorchLLMOPtimizer(TorchPPOOptimizer):
@@ -91,13 +93,13 @@ class TorchLLMOPtimizer(TorchPPOOptimizer):
             sequence_length=self.policy.sequence_length,
         )
 
-        # da ottenere, vediamo come si fa
+        # da ottenere
         llm_old_probs = ActionLogProbs.from_buffer(batch)
         old_log_probs = ActionLogProbs.from_buffer(batch)
         
-        old_log_probs_action = old_log_probs.flatten()
         log_probs_action = log_probs.flatten()
-
+        old_log_probs_action = old_log_probs.flatten()
+        
         loss_masks = ModelUtils.list_to_tensor(batch[BufferKey.MASKS], dtype=torch.bool)
 
         value_loss = ModelUtils.trust_region_value_loss(
@@ -112,24 +114,22 @@ class TorchLLMOPtimizer(TorchPPOOptimizer):
             decay_eps,
         )
 
+        llm_loss = LLMUtils.calculate_kl_distance(log_probs, llm_old_probs)
+
         loss = (
             policy_loss
             + 0.5 * value_loss
-            # Minimizzare una loss con
-            #  -entropia è equivalente a massimizzare l'entropia. 'decay_bet' ne regola l'intensità.
+            + decay_alpha * llm_loss
             - decay_bet * ModelUtils.masked_mean(entropy, loss_masks)
         )
 
         # Set optimizer learning rate
         ModelUtils.update_learning_rate(self.optimizer, decay_lr)
 
-        # Azzera i gradienti calcolati nel mini-batch precedente.
         self.optimizer.zero_grad()
 
-        # Calcola il gradiente
         loss.backward()
 
-        # Aggiorna i pesi della rete
         self.optimizer.step()
         update_stats = {
             # NOTE: abs() is not technically correct, but matches the behavior in TensorFlow.
