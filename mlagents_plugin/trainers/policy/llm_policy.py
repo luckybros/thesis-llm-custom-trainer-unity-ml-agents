@@ -12,7 +12,7 @@ from mlagents_envs.logging_util import get_logger
 from mlagents_envs.base_env import BehaviorSpec, DecisionSteps, ActionTuple
 from mlagents.trainers.settings import NetworkSettings
 from mlagents.trainers.torch_entities.networks import GlobalSteps
-from .mock_communication_client import MockCommunicationClient
+from ..mock_communication_client import MockCommunicationClient
 
 logger = get_logger(__name__)
 

@@ -13,7 +13,7 @@ from mlagents.trainers.ppo.optimizer_torch import PPOSettings
 from mlagents.trainers.ppo.trainer import PPOTrainer
 from mlagents.trainers.torch_entities.networks import SimpleActor, SharedActorCritic
 
-from .llm_policy import TorchLLMPolicy
+from ...policy.llm_policy import TorchLLMPolicy
 
 logger = get_logger(__name__)
 

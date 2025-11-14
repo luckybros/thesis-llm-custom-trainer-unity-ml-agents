@@ -1,5 +1,5 @@
 import numpy as np
-from llm_interface import LLMCommunicator
+from simple_plugin.mlagents_plugin.communicators.llm_communicator_interface import LLMCommunicator
 
 class MockCommunicator(LLMCommunicator):
 

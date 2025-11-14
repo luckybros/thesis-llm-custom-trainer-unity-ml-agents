@@ -6,10 +6,11 @@ import numpy as np
 from mlagents.trainers.torch_entities.utils import ModelUtils
 from mlagents.trainers.buffer import AgentBuffer, BufferKey
 from mlagents_envs.base_env import _ActionTupleBase
-from .llm_utils.llm_buffer import LLMBufferKey
+from mlagents_plugin.utils.llm_buffer import LLMBufferKey
 
 class LLMActionLogProbs(ActionLogProbs):
 
+    @staticmethod
     def from_buffer_llm(buff: AgentBuffer) -> "ActionLogProbs":
         """
         A static method that accesses continuous and discrete log probs fields from the 
@@ -31,9 +32,24 @@ class LLMActionLogProbs(ActionLogProbs):
                 ]
         return LLMActionLogProbs(continuous, discrete, None)
     
-    def flatten_all_discrete(self) -> torch.Tensor:
+    def _all_distributions_to_tensor_list(self) -> List[torch.Tensor]:
         """
-        A utility method that returns all log probs
+        Returns the distributions (both continue and discrete) in the ActionLogProbs 
+        as a flat List of torch Tensors. This is private and serves as a utility 
+        for self.flatten_distributions()
         """
+        tensor_list: List[torch.Tensor] = []
+        if self.continuous_tensor is not None:
+            tensor_list.append(self.continuous_tensor)
+        if self.all_discrete_list is not None:
+            tensor_list.append(self.all_discrete_list)
+        return tensor_list
+
+    def flatten_distributions(self) -> torch.Tensor:
+        """
+        A utility method that returns all log probs in the ActionLogProbs in 
+        a 2D tensor
+        """
+        return torch.cat(self._all_distributions_to_tensor_list(), dim=1)
 
 

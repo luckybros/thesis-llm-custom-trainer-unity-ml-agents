@@ -5,7 +5,7 @@ from mlagents.trainers.settings import (
     ScheduleType,
 )
 from mlagents.trainers.torch_entities.utils import ModelUtils
-from .llm_policy import TorchLLMPolicy
+from .policy.llm_policy import TorchLLMPolicy
 from mlagents.trainers.torch_entities.agent_action import AgentAction
 from mlagents.trainers.buffer import AgentBuffer, BufferKey, RewardSignalUtil
 from mlagents.trainers.trajectory import ObsUtil
