@@ -11,7 +11,7 @@ setup(
     # will get registered with the ML_AGENTS_STATS_WRITER plugin interface.
     entry_points={
         ML_AGENTS_TRAINER_TYPE: [
-            "llm_trainer=mlagents_plugin.llm_trainer:get_type_and_setting",
+            "llm_trainer=mlagents_plugin.trainers.trainer.llm_trainer:get_type_and_setting",
         ]
     },
     

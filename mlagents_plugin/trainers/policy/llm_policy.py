@@ -12,7 +12,8 @@ from mlagents_envs.logging_util import get_logger
 from mlagents_envs.base_env import BehaviorSpec, DecisionSteps, ActionTuple
 from mlagents.trainers.settings import NetworkSettings
 from mlagents.trainers.torch_entities.networks import GlobalSteps
-from ..mock_communication_client import MockCommunicationClient
+from mlagents_plugin.communicators.mock_communication_client import MockCommunicationClient
+from mlagents_plugin.trainers.llm_buffer import LLMBuffer, LLMBufferKey
 
 logger = get_logger(__name__)
 
@@ -32,37 +33,47 @@ class TorchLLMPolicy(TorchPolicy):
         self.num_actions = behavior_spec.action_spec.discrete_size
         self.num_agents = len(behavior_spec.observation_specs)
         self.communicator_client = MockCommunicationClient(discrete_branches=self.action_spec.discrete_branches, num_agents=self.num_agents)
-        logger.info("--- LLM Policy initialized! ---")
+        self.llm_buffer = LLMBuffer()
+        
 
     def get_action(
             self, decision_requests: DecisionSteps, worker_id : int
     ) -> ActionInfo:
         
-        action_info = super.get_action(decision_requests, worker_id)
+        llm_run_out = self.llm_evaluate(decision_requests)  
+
+        if "discrete" in llm_run_out:
+            discrete_log_probs = llm_run_out["discrete"]
+            for log_prob in discrete_log_probs:
+                self.llm_buffer.add_entry(LLMBufferKey.LLM_LOG_DISCRETE_LOG_PROBS, log_prob)
         
-        llm_run_out = self.llm_evaluate(decision_requests)  # Dovrà contenere l'azione scelta dall'LLM e le distribuzioni di probabilità
-
-        action_info.outputs["llm_action"] = llm_run_out["action"]
-        action_info.outputs["llm_log_probs"] = llm_run_out["log_probs"]
-
-        return action_info
+        if "continuous" in llm_run_out:
+            continuous_log_probs = llm_run_out["continuous"]
+            for log_prob in continuous_log_probs:
+                self.llm_buffer.add_entry(LLMBufferKey.LLM_LOG_CONTINUOUS_LOG_PROBS, log_prob)
+        
+        return super().get_action(decision_requests, worker_id)
 
 
     def llm_evaluate(
             self, decision_requests: DecisionSteps
-    ) -> Dict[str, Any]:
-        
+    ) -> Dict[str, List[np.ndarray]]:
+        """
+        Interrogate the LLM and obtains action log probs distribution in this format
+        {
+            "discrete": [array_ag1, array_ag2, ...],
+            "continuous": [array_ag1, array_ag2, ...]
+        }
+        """
         obs = decision_requests.obs
         masks = self._extract_masks(decision_requests)
 
         # Le azioni devono essere di tipo AgentAction, mentre le distribuzioni di tipo DistInstances, e le log_probs di tipo ActionLogProbs (bisogna scrivere un util sicuramente)
-        llm_action, llm_run_out = self.communicator_client.recieve_action_from_llm(obs) # AgentAction, Dict[str, Any]
-
-        llm_run_out["action"] = llm_action.to_action_tuple()
-
-        if "log_probs" in llm_run_out:
-            llm_run_out["log_probs"] = llm_run_out["log_probs"].to_log_probs_tuple()
+        llm_run_out = self.communicator_client.recieve_action_from_llm(obs) # Dict[str, Any]
 
         return llm_run_out
         
-        
+    def pop_llm_buffer_data(
+            self, num_items: int
+    ) -> Dict[LLMBufferKey, List[np.ndarray]]:
+        return self.llm_buffer.pop_n_entries(num_items=num_items)

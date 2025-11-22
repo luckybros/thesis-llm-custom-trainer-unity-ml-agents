@@ -24,9 +24,9 @@ class MockCommunicationServer:
 
         states = request_json["states"]
         text_states = [self.communicator.encode_state(state) for state in states]
-        distributions, user = self.communicator.get_llm_policy(text_states)
+        distributions = self.communicator.get_llm_policy(text_states)
         distributions = [[action_list.tolist() for action_list in agent_list] for agent_list in distributions]
-        response_payload = {"probabilities": distributions, "user": user}
+        response_payload = {"discrete": distributions}
         return json.dumps(response_payload).encode('utf-8')
 
 def main():
@@ -42,7 +42,7 @@ def main():
                 client_conn, client_addr = server.accept()
 
                 with client_conn:
-                    data = client_conn.recv(1024)
+                    data = client_conn.recv(131072)
                     if not data:
                         continue
 

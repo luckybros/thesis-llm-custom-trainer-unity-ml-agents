@@ -16,10 +16,11 @@ class MockCommunicationClient:
             "discrete_branches": discrete_branches,
             "num_agents": num_agents
         }
+        
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as client:
             client.connect((self.HOST, self.PORT))
             client.sendall(json.dumps(payload).encode('utf-8'))
-            data = client.recv(1024)
+            data = client.recv(131072)
 
     def recieve_action_from_llm(self, states):
         payload = {
@@ -29,10 +30,8 @@ class MockCommunicationClient:
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as client:
             client.connect((self.HOST, self.PORT))
             client.sendall(json.dumps(payload).encode('utf-8'))
-            data = client.recv(4096)
+            data = client.recv(131072)
             data = json.loads(data.decode('utf-8'))
-            probabilities = data["probabilities"]
-            user = data["user"]
-            return (probabilities, user)
+            return data
 
 

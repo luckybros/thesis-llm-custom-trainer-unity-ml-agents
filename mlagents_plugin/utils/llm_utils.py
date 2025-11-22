@@ -6,7 +6,7 @@ class LLMUtils:
 
     @staticmethod
     def calculate_kl_distance(
-        d1: torch.Tensor,
+        d1: torch.Tensor, 
         d2: torch.Tensor,
     ) -> torch.Tensor:
         """

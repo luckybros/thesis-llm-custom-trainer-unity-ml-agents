@@ -14,7 +14,6 @@ from .llm_policy import LLMPolicy
 
 logger = get_logger(__name__)
 
-TRAINER_NAME = "llm_trainer"
 
 class LLMTrainer(RLTrainer):
 

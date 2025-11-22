@@ -1,12 +1,12 @@
 from typing import Dict
-from mlagents.trainers.ppo.optimizer import TorchPPOOptimizer
+from mlagents.trainers.ppo.optimizer_torch import TorchPPOOptimizer
 from mlagents.trainers.settings import (
     TrainerSettings,
     OnPolicyHyperparamSettings,
     ScheduleType,
 )
 from mlagents.trainers.torch_entities.utils import ModelUtils
-from .policy.llm_policy import TorchLLMPolicy
+from mlagents_plugin.trainers.llm_buffer import LLMBufferKey
 from mlagents.trainers.torch_entities.agent_action import AgentAction
 from mlagents.trainers.buffer import AgentBuffer, BufferKey, RewardSignalUtil
 from mlagents.trainers.trajectory import ObsUtil
@@ -14,9 +14,12 @@ from mlagents_envs.timers import timed
 from mlagents.torch_utils import torch, default_device
 from mlagents.trainers.torch_entities.action_log_probs import ActionLogProbs
 from mlagents_plugin.utils.llm_utils import LLMUtils
+from mlagents_plugin.trainers.policy.llm_policy import TorchLLMPolicy
+from mlagents_envs.logging_util import get_logger
 
+logger = get_logger(__name__)
 
-class TorchLLMOPtimizer(TorchPPOOptimizer):
+class TorchLLMOptimizer(TorchPPOOptimizer):
 
     def __init__(self, policy: TorchLLMPolicy, trainer_settings: TrainerSettings):
 
@@ -93,8 +96,16 @@ class TorchLLMOPtimizer(TorchPPOOptimizer):
             sequence_length=self.policy.sequence_length,
         )
 
-        # da ottenere
-        llm_old_probs = ActionLogProbs.from_buffer(batch)
+        llm_log_probs = None
+        
+        # Eventually write a static method of a class that does that
+        if LLMBufferKey.LLM_LOG_DISCRETE_LOG_PROBS in batch:
+            # 1. Estrai i dati dal buffer e convertili in un tensore.
+            # Questo è l'UNICO passo che serve. Il risultato è un tensore grezzo.
+            llm_log_probs = ModelUtils.list_to_tensor(
+                batch[LLMBufferKey.LLM_LOG_DISCRETE_LOG_PROBS]
+            )
+            
         old_log_probs = ActionLogProbs.from_buffer(batch)
         
         log_probs_action = log_probs.flatten()
@@ -114,8 +125,13 @@ class TorchLLMOPtimizer(TorchPPOOptimizer):
             decay_eps,
         )
 
-        llm_loss = LLMUtils.calculate_kl_distance(log_probs, llm_old_probs)
+        log_probs = log_probs.all_discrete_tensor
 
+        logger.info(f"log_probs: {log_probs}")
+        logger.info(f"llm_log_probs: {llm_log_probs}")
+        llm_loss = LLMUtils.calculate_kl_distance(log_probs, llm_log_probs)
+
+        print(f"LLM Loss: {llm_loss}")
         loss = (
             policy_loss
             + 0.5 * value_loss

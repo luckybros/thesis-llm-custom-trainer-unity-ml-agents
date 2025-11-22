@@ -1,5 +1,6 @@
 import numpy as np
-from simple_plugin.mlagents_plugin.communicators.llm_communicator_interface import LLMCommunicator
+from llm_communicator_interface import LLMCommunicator
+
 
 class MockCommunicator(LLMCommunicator):
 
@@ -43,6 +44,7 @@ class MockCommunicator(LLMCommunicator):
 
         # Ogni 100 passi usa le distribuzioni dell'utente
         if self._call_count % self.reevaluation_interval == 0:
+            """
             new_distributions = []
             for j in range(self.num_agents):
                 agent_distributions = []
@@ -52,7 +54,8 @@ class MockCommunicator(LLMCommunicator):
                     distr[chosen_action] = 1.0
                     agent_distributions.append(distr)
                 new_distributions.append(agent_distributions)
+            """
             self._cached_distributions = self._generate_random_distributions()
-            return (new_distributions, 1)
+            return self._cached_distributions
         else:
-            return (self._cached_distributions, 0)
+            return self._cached_distributions
