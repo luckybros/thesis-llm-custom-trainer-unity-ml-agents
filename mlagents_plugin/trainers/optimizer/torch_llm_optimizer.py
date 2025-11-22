@@ -100,8 +100,6 @@ class TorchLLMOptimizer(TorchPPOOptimizer):
         
         # Eventually write a static method of a class that does that
         if LLMBufferKey.LLM_LOG_DISCRETE_LOG_PROBS in batch:
-            # 1. Estrai i dati dal buffer e convertili in un tensore.
-            # Questo è l'UNICO passo che serve. Il risultato è un tensore grezzo.
             llm_log_probs = ModelUtils.list_to_tensor(
                 batch[LLMBufferKey.LLM_LOG_DISCRETE_LOG_PROBS]
             )
