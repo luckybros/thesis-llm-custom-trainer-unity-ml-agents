@@ -14,33 +14,14 @@ class LLMBufferKey(enum.Enum):
     LLM_LOG_DISCRETE_LOG_PROBS = "llm_discrete_log_probs"
 
 
-class LLMBufferField(list):
-
-    def __init__(self, *args, **kwargs):
-        self.padding_value = 0
-        super().__init__(*args, **kwargs)
-
-    def __str__(self) -> str:
-        return f"LLMAgentBufferField: {super.__str__()}"
-    
-    def __getitem__(self, index):
-        return_data = super().__getitem__(index)
-        if isinstance(return_data, list):
-            return LLMBufferField(return_data)
-        else:
-            return return_data
-        
-
 class LLMBuffer:
     def __init__(self):
-        self._fields: DefaultDict[LLMBufferKey, LLMBufferField] = defaultdict(LLMBufferField)
+        self._fields: DefaultDict[LLMBufferKey, List[List[np.ndarray]]] = defaultdict(list)
         
-    def __getitem__(self, key: LLMBufferKey) -> LLMBufferField:
-        """Permette di accedere a un campo specifico, es. buffer[LLMBufferKey.LOGITS]"""
+    def __getitem__(self, key: LLMBufferKey) -> List[List[np.ndarray]]:
         return self._fields[key]
 
     def add_entry(self, key: LLMBufferKey, data: np.ndarray) -> None:
-        """Aggiunge una singola entry (un numpy array) a un campo specifico."""
         self[key].append(data)
 
     def pop_n_entries(self, num_items: int) -> Dict[LLMBufferKey, List[np.ndarray]]:
@@ -62,7 +43,3 @@ class LLMBuffer:
         
         return return_dict
 
-    def __len__(self) -> int:
-        if not self._fields:
-            return 0
-        return len(next(iter(self._fields.values())))

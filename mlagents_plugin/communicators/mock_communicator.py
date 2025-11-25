@@ -1,6 +1,6 @@
+from typing import Dict, List
 import numpy as np
 from llm_communicator_interface import LLMCommunicator
-
 
 class MockCommunicator(LLMCommunicator):
 
@@ -15,11 +15,11 @@ class MockCommunicator(LLMCommunicator):
         # Uniform distribution for every branch
         self._cached_distributions = [[np.ones(size) / size for size in self.discrete_branches] for i in range (self.num_agents)]
 
-    def _generate_random_distributions(self):
+    def _generate_random_distributions(self) -> Dict[int, List[float]]:
         """
         Helper method to generate a random distribution
         """
-        distributions = []
+        distributions = {}
         for i in range(self.num_agents):
             logits_per_agent = [np.random.rand(size) for size in self.discrete_branches]
             agent_distributions = []
@@ -29,8 +29,9 @@ class MockCommunicator(LLMCommunicator):
                     normalized_dist = np.ones(len(logits)) / len(logits)
                 else:
                     normalized_dist = logits / distribution_sum
+                normalized_dist = np.log(normalized_dist)
                 agent_distributions.append(normalized_dist)
-            distributions.append(agent_distributions)
+            distributions["agent_0-"+str(i)] = agent_distributions
         return distributions
     
     def encode_state(self, state):
@@ -58,4 +59,4 @@ class MockCommunicator(LLMCommunicator):
             self._cached_distributions = self._generate_random_distributions()
             return self._cached_distributions
         else:
-            return self._cached_distributions
+            return self._generate_random_distributions()

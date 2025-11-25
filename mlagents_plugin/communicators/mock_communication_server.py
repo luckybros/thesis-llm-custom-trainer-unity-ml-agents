@@ -25,7 +25,11 @@ class MockCommunicationServer:
         states = request_json["states"]
         text_states = [self.communicator.encode_state(state) for state in states]
         distributions = self.communicator.get_llm_policy(text_states)
-        distributions = [[action_list.tolist() for action_list in agent_list] for agent_list in distributions]
+        # distributions = [[action_list.tolist() for action_list in agent_list] for agent_list in distributions]
+        distributions = {
+            k: [arr.tolist() for arr in v]
+            for k, v in distributions.items()
+        }
         response_payload = {"discrete": distributions}
         return json.dumps(response_payload).encode('utf-8')
 

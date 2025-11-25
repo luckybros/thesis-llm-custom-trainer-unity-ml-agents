@@ -104,6 +104,12 @@ class TorchLLMOptimizer(TorchPPOOptimizer):
                 batch[LLMBufferKey.LLM_LOG_DISCRETE_LOG_PROBS]
             )
             
+        # At this point, llm_log_probs is a 3D tensor with this dimentions: [timestamp][action_type][action_dist]
+        # We should it became a list of 2d tensor on the actions.
+        #logger.info(f"llm_log_probs pre: {llm_log_probs}")
+        llm_log_probs = LLMUtils.tensor3d_to_list_of_2d(llm_log_probs)
+        #logger.info(f"llm_log_probs pre: {llm_log_probs}")
+
         old_log_probs = ActionLogProbs.from_buffer(batch)
         
         log_probs_action = log_probs.flatten()
@@ -122,14 +128,19 @@ class TorchLLMOptimizer(TorchPPOOptimizer):
             loss_masks,
             decay_eps,
         )
+        
+        # all_discrete_list restituisce una lista di tensori, un tensore per azione!
+        # devo fare lo stesso per l'LLM che attualmente non raggruppa tutte le prob per azione 
+        log_probs = log_probs.all_discrete_list
 
-        log_probs = log_probs.all_discrete_tensor
-
-        logger.info(f"log_probs: {log_probs}")
-        logger.info(f"llm_log_probs: {llm_log_probs}")
+        #logger.info(f"current_obs: {current_obs}")
+        #logger.info(f"action: {actions}")
+        #logger.info(f"log_probs in Optimizer: {log_probs}")
+        #logger.info(f"llm_log_probs in Optimizer: {llm_log_probs}")
+        #assert log_probs[0].shape == llm_log_probs[0].shape
         llm_loss = LLMUtils.calculate_kl_distance(log_probs, llm_log_probs)
 
-        print(f"LLM Loss: {llm_loss}")
+        #logger.info(f"LLM Loss: {llm_loss}")
         loss = (
             policy_loss
             + 0.5 * value_loss

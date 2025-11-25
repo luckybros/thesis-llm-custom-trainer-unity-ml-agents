@@ -14,6 +14,7 @@ from mlagents.trainers.settings import NetworkSettings
 from mlagents.trainers.torch_entities.networks import GlobalSteps
 from mlagents_plugin.communicators.mock_communication_client import MockCommunicationClient
 from mlagents_plugin.trainers.llm_buffer import LLMBuffer, LLMBufferKey
+from mlagents_plugin.utils.llm_utils import LLMUtils
 
 logger = get_logger(__name__)
 
@@ -33,7 +34,7 @@ class TorchLLMPolicy(TorchPolicy):
         self.num_actions = behavior_spec.action_spec.discrete_size
         self.num_agents = len(behavior_spec.observation_specs)
         self.communicator_client = MockCommunicationClient(discrete_branches=self.action_spec.discrete_branches, num_agents=self.num_agents)
-        self.llm_buffer = LLMBuffer()
+        self.agent_llm_buffers: Dict[str, LLMBuffer] = {}
         
 
     def get_action(
@@ -42,11 +43,23 @@ class TorchLLMPolicy(TorchPolicy):
         
         llm_run_out = self.llm_evaluate(decision_requests)  
 
+        global_agent_ids = [
+            get_global_agent_id(worker_id, int(agent_id))
+            for agent_id in decision_requests.agent_id
+        ] 
+
+        #logger.info(f"global_agent_ids: {global_agent_ids}")
+
         if "discrete" in llm_run_out:
             discrete_log_probs = llm_run_out["discrete"]
-            for log_prob in discrete_log_probs:
-                self.llm_buffer.add_entry(LLMBufferKey.LLM_LOG_DISCRETE_LOG_PROBS, log_prob)
-        
+            for agent_id, dist in discrete_log_probs.items():
+                if agent_id not in self.agent_llm_buffers:
+                    self.agent_llm_buffers[agent_id] = LLMBuffer()
+                # Squeeze nel caso single action, si puo fare sicuramente meglio 
+                # dist = LLMUtils.squeeze_list_dim(batch_list=dist)
+                self.agent_llm_buffers[agent_id].add_entry(LLMBufferKey.LLM_LOG_DISCRETE_LOG_PROBS, dist)
+
+
         if "continuous" in llm_run_out:
             continuous_log_probs = llm_run_out["continuous"]
             for log_prob in continuous_log_probs:
@@ -70,10 +83,18 @@ class TorchLLMPolicy(TorchPolicy):
 
         # Le azioni devono essere di tipo AgentAction, mentre le distribuzioni di tipo DistInstances, e le log_probs di tipo ActionLogProbs (bisogna scrivere un util sicuramente)
         llm_run_out = self.communicator_client.recieve_action_from_llm(obs) # Dict[str, Any]
-
         return llm_run_out
         
     def pop_llm_buffer_data(
-            self, num_items: int
+            self, agent_id: int, num_items: int
     ) -> Dict[LLMBufferKey, List[np.ndarray]]:
-        return self.llm_buffer.pop_n_entries(num_items=num_items)
+
+        # Hard-coded per ora su Basic, poihé non so perché agent_id cambia sempre se ho un agente
+        if self.num_agents == 1:
+            #logger.info(f"superdebug: {self.agent_llm_buffers['agent_0-0']}")
+            return self.agent_llm_buffers["agent_0-0"].pop_n_entries(num_items=num_items)
+        
+        if agent_id not in self.agent_llm_buffers:
+            return []
+        
+        return self.agent_llm_buffers[agent_id].pop_n_entries(num_items=num_items)

@@ -7,7 +7,7 @@ from mlagents.trainers.trainer.rl_trainer import RLTrainer
 from mlagents.trainers.settings import TrainerSettings
 from mlagents_envs.base_env import BehaviorSpec
 from mlagents.trainers.behavior_id_utils import BehaviorIdentifiers
-from mlagents.trainers.buffer import BufferKey, RewardSignalUtil
+from mlagents.trainers.buffer import BufferKey, ObservationKeyPrefix, RewardSignalUtil
 from mlagents.trainers.trajectory import Trajectory
 from mlagents.trainers.optimizer import Optimizer
 from mlagents.trainers.trainer.trainer_utils import get_gae
@@ -16,6 +16,7 @@ from mlagents.trainers.settings import TrainerSettings
 from mlagents.trainers.ppo.optimizer_torch import PPOSettings
 from mlagents.trainers.ppo.trainer import PPOTrainer
 from mlagents.trainers.torch_entities.networks import SimpleActor, SharedActorCritic
+
 
 from mlagents_plugin.trainers.policy.llm_policy import TorchLLMPolicy
 from mlagents_plugin.trainers.optimizer.torch_llm_optimizer import TorchLLMOptimizer
@@ -63,6 +64,7 @@ class LLMTrainer(PPOTrainer):
 
         agent_id = trajectory.agent_id  # All the agents should have the same ID
 
+        #logger.info(f"agent_id: {agent_id}")
         agent_buffer_trajectory = trajectory.to_agentbuffer()
 
         # Check if we used group rewards, warn if so.
@@ -152,13 +154,17 @@ class LLMTrainer(PPOTrainer):
         agent_buffer_trajectory[BufferKey.ADVANTAGES].set(global_advantages)
         agent_buffer_trajectory[BufferKey.DISCOUNTED_RETURNS].set(global_returns)
 
+        # le probs dell LLM sono a gruppi di time_horizon, voglio vedere
+        # come le altre statistiche sono salvate
         # NEW: Adding LLM log probs
         num_steps = len(trajectory.steps)
-        llm_log_probs = self.policy.pop_llm_buffer_data(num_steps)
+        llm_log_probs = self.policy.pop_llm_buffer_data(agent_id=agent_id, num_items=num_steps)
 
+        # è vero qui li raggruppo per timestamp ma solo perché sono stati salvati cosi prima
         for key, item in llm_log_probs.items():
             agent_buffer_trajectory[key].extend(item)
 
+        #logger.info(f"Trajectory: {agent_buffer_trajectory}")
         self._append_to_update_buffer(agent_buffer_trajectory)
 
         # logger.info(agent_buffer_trajectory)
