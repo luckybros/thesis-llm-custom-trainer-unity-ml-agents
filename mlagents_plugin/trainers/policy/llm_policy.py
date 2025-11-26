@@ -13,6 +13,7 @@ from mlagents_envs.base_env import BehaviorSpec, DecisionSteps, ActionTuple
 from mlagents.trainers.settings import NetworkSettings
 from mlagents.trainers.torch_entities.networks import GlobalSteps
 from mlagents_plugin.communicators.mock_communication_client import MockCommunicationClient
+from mlagents_plugin.communicators.random_communication_client import RandomCommunicationClient
 from mlagents_plugin.trainers.llm_buffer import LLMBuffer, LLMBufferKey
 from mlagents_plugin.utils.llm_utils import LLMUtils
 
@@ -33,7 +34,9 @@ class TorchLLMPolicy(TorchPolicy):
         self.action_spec = behavior_spec.action_spec
         self.num_actions = behavior_spec.action_spec.discrete_size
         self.num_agents = len(behavior_spec.observation_specs)
-        self.communicator_client = MockCommunicationClient(discrete_branches=self.action_spec.discrete_branches, num_agents=self.num_agents)
+        # qua si puo fare cls nel costruttore e specificare il client da iperparametro
+        # logger.info(f"observation_specs : {behavior_spec.observation_specs}")
+        self.communicator_client : RandomCommunicationClient = None
         self.agent_llm_buffers: Dict[str, LLMBuffer] = {}
         
 
@@ -41,12 +44,16 @@ class TorchLLMPolicy(TorchPolicy):
             self, decision_requests: DecisionSteps, worker_id : int
     ) -> ActionInfo:
         
+        obs = decision_requests.obs
+        
         llm_run_out = self.llm_evaluate(decision_requests)  
 
         global_agent_ids = [
             get_global_agent_id(worker_id, int(agent_id))
             for agent_id in decision_requests.agent_id
         ] 
+
+        #logger.info(f"llm_run_out: {llm_run_out}")
 
         #logger.info(f"global_agent_ids: {global_agent_ids}")
 
@@ -62,9 +69,11 @@ class TorchLLMPolicy(TorchPolicy):
 
         if "continuous" in llm_run_out:
             continuous_log_probs = llm_run_out["continuous"]
-            for log_prob in continuous_log_probs:
-                self.llm_buffer.add_entry(LLMBufferKey.LLM_LOG_CONTINUOUS_LOG_PROBS, log_prob)
-        
+            for agent_id, dist in continuous_log_probs.items():
+                if agent_id not in self.agent_llm_buffers:
+                    self.agent_llm_buffers[agent_id] = LLMBuffer()
+                self.agent_llm_buffers[agent_id].add_entry(LLMBufferKey.LLM_LOG_CONTINUOUS_LOG_PROBS, dist)
+                
         return super().get_action(decision_requests, worker_id)
 
 
@@ -79,6 +88,12 @@ class TorchLLMPolicy(TorchPolicy):
         }
         """
         obs = decision_requests.obs
+        num_agents = len(obs[0])
+
+        #logger.info(f"num_agents: {num_agents}")
+
+        if self.communicator_client is None:
+            self.communicator_client = RandomCommunicationClient(discrete_branches=self.action_spec.discrete_branches, num_agents=num_agents)
         masks = self._extract_masks(decision_requests)
 
         # Le azioni devono essere di tipo AgentAction, mentre le distribuzioni di tipo DistInstances, e le log_probs di tipo ActionLogProbs (bisogna scrivere un util sicuramente)
@@ -95,6 +110,6 @@ class TorchLLMPolicy(TorchPolicy):
             return self.agent_llm_buffers["agent_0-0"].pop_n_entries(num_items=num_items)
         
         if agent_id not in self.agent_llm_buffers:
-            return []
+            return {}
         
         return self.agent_llm_buffers[agent_id].pop_n_entries(num_items=num_items)

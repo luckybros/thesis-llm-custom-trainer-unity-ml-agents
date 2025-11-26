@@ -2,14 +2,15 @@
 
 import socket
 import json
+from .base_communication_client import BaseCommunicationClient
 
-class MockCommunicationClient:
+class MockCommunicationClient(BaseCommunicationClient):
 
     def __init__(self, discrete_branches: tuple[int], num_agents: int):
+
+        super.__init__(discrete_branches=discrete_branches, num_agents=num_agents)
         self.HOST = "127.0.0.1"
         self.PORT = 65432
-        self.discrete_branches = discrete_branches
-        self.num_agents = num_agents
 
         payload = {
             "type": "init",

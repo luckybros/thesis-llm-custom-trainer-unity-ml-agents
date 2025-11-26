@@ -161,6 +161,10 @@ class LLMTrainer(PPOTrainer):
         llm_log_probs = self.policy.pop_llm_buffer_data(agent_id=agent_id, num_items=num_steps)
 
         # è vero qui li raggruppo per timestamp ma solo perché sono stati salvati cosi prima
+        # logger.info(f"llm_log_probs process_trajectory: {llm_log_probs}")
+        #if not isinstance(llm_log_probs, dict):
+        #    logger.warning(f"Attenzione: llm_log_probs non è un dict ma {type(llm_log_probs)}!")
+
         for key, item in llm_log_probs.items():
             agent_buffer_trajectory[key].extend(item)
 

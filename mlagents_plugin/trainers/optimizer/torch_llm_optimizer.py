@@ -135,12 +135,12 @@ class TorchLLMOptimizer(TorchPPOOptimizer):
 
         #logger.info(f"current_obs: {current_obs}")
         #logger.info(f"action: {actions}")
-        #logger.info(f"log_probs in Optimizer: {log_probs}")
-        #logger.info(f"llm_log_probs in Optimizer: {llm_log_probs}")
+        # logger.info(f"log_probs in Optimizer: {log_probs}")
+        # logger.info(f"llm_log_probs in Optimizer: {llm_log_probs}")
         #assert log_probs[0].shape == llm_log_probs[0].shape
         llm_loss = LLMUtils.calculate_kl_distance(log_probs, llm_log_probs)
 
-        #logger.info(f"LLM Loss: {llm_loss}")
+        # logger.info(f"LLM Loss: {llm_loss}")
         loss = (
             policy_loss
             + 0.5 * value_loss

@@ -1,6 +1,6 @@
 from typing import Dict, List
 import numpy as np
-from llm_communicator_interface import LLMCommunicator
+from mlagents_plugin.communicators.llm_communicator_interface import LLMCommunicator
 
 class MockCommunicator(LLMCommunicator):
 
