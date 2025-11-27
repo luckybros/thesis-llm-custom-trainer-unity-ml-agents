@@ -16,6 +16,7 @@ from mlagents.trainers.settings import TrainerSettings
 from mlagents.trainers.ppo.optimizer_torch import PPOSettings
 from mlagents.trainers.ppo.trainer import PPOTrainer
 from mlagents.trainers.torch_entities.networks import SimpleActor, SharedActorCritic
+from mlagents_plugin.trainers.torch_entities.networks import LLMSimpleActor, LLMSharedActorCritic
 
 
 from mlagents_plugin.trainers.policy.llm_policy import TorchLLMPolicy
@@ -168,7 +169,7 @@ class LLMTrainer(PPOTrainer):
         for key, item in llm_log_probs.items():
             agent_buffer_trajectory[key].extend(item)
 
-        #logger.info(f"Trajectory: {agent_buffer_trajectory}")
+        logger.info(f"Trajectory: {agent_buffer_trajectory}")
         self._append_to_update_buffer(agent_buffer_trajectory)
 
         # logger.info(agent_buffer_trajectory)
@@ -186,7 +187,7 @@ class LLMTrainer(PPOTrainer):
             self, parsed_behavior_id: BehaviorIdentifiers, behavior_spec: BehaviorSpec
     ) -> TorchLLMPolicy:
         
-        actor_cls: Union[Type[SimpleActor], Type[SharedActorCritic]] = SimpleActor
+        actor_cls: Union[Type[LLMSimpleActor], Type[LLMSharedActorCritic]] = LLMSimpleActor
         actor_kwargs: Dict[str, Any] = {
             "conditional_sigma": False,
             "tanh_squash": False,
@@ -196,7 +197,7 @@ class LLMTrainer(PPOTrainer):
             reward_signal_names = [
                 key.value for key, _ in reward_signal_configs.items()
             ]
-            actor_cls = SharedActorCritic
+            actor_cls = LLMSharedActorCritic
             actor_kwargs.update({"stream_names": reward_signal_names})
 
         policy = TorchLLMPolicy(

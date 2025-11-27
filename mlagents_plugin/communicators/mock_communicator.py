@@ -4,35 +4,60 @@ from mlagents_plugin.communicators.llm_communicator_interface import LLMCommunic
 
 class MockCommunicator(LLMCommunicator):
 
-    def __init__(self, discrete_branches: tuple[int], num_agents: int):
+    def __init__(self, discrete_branches: tuple[int], num_continuous_action: int, num_agents: int):
         """
         We tell the communicator how many actions he can take
         """
         self.discrete_branches = discrete_branches
+        print(f"AAAA: {self.discrete_branches}")
+        self.num_continuous_action = num_continuous_action
         self.num_agents = num_agents
         self.reevaluation_interval = 100
         self._call_count = 0
         # Uniform distribution for every branch
-        self._cached_distributions = [[np.ones(size) / size for size in self.discrete_branches] for i in range (self.num_agents)]
+        # self._cached_distributions = [[np.ones(size) / size for size in self.discrete_branches] for i in range (self.num_agents)]
 
-    def _generate_random_distributions(self) -> Dict[int, List[float]]:
+    def _generate_random_distributions(self) -> Dict[str, List[np.ndarray]]:
         """
-        Helper method to generate a random distribution
+        Helper method to generate a random log-prob distribution for discrete actions, per agent.
         """
         distributions = {}
         for i in range(self.num_agents):
             logits_per_agent = [np.random.rand(size) for size in self.discrete_branches]
             agent_distributions = []
+            # Normalize
             for logits in logits_per_agent:
                 distribution_sum = np.sum(logits)
                 if distribution_sum == 0.0:
                     normalized_dist = np.ones(len(logits)) / len(logits)
                 else:
                     normalized_dist = logits / distribution_sum
-                normalized_dist = np.log(normalized_dist)
+                normalized_dist = np.log(normalized_dist)   # log-probs
                 agent_distributions.append(normalized_dist)
-            distributions["agent_0-"+str(i)] = agent_distributions
+            distributions[f"agent_0-{i}"] = agent_distributions
+
+        distributions = {
+            k: [arr.tolist() for arr in v]
+            for k, v in distributions.items()
+        }
         return distributions
+    
+    def _generate_random_continuous_params(self) -> Dict[str, List[np.ndarray]]:
+        """
+        Generates mean and std vector (size=num_continuous_action) for each agent
+        """
+        params = {}
+        for i in range(self.num_agents):
+            mean = np.random.uniform(-1, 1, self.num_continuous_action)
+            std = np.random.uniform(1e-2, 1.0, self.num_continuous_action)  # use positive std!
+            agent_distribution = [mean, std]
+            params[f"agent_0-{i}"] = agent_distribution
+
+        params = {
+            k: [arr.tolist() for arr in v]
+            for k, v in params.items()
+        }
+        return params
     
     def encode_state(self, state):
         return state
@@ -41,11 +66,16 @@ class MockCommunicator(LLMCommunicator):
         """
         In the mock communicator we return a random distribution over the action space, and we choose one every 100 action
         """
-        self._call_count += 1
-
+        payload = {}
+        if len(self.discrete_branches) > 0:
+            payload["discrete"] = self._generate_random_distributions()
+        if self.num_continuous_action > 0:
+            payload["continuous"] = self._generate_random_continuous_params()
+        return payload
+        """
         # Ogni 100 passi usa le distribuzioni dell'utente
         if self._call_count % self.reevaluation_interval == 0:
-            """
+
             new_distributions = []
             for j in range(self.num_agents):
                 agent_distributions = []
@@ -55,8 +85,7 @@ class MockCommunicator(LLMCommunicator):
                     distr[chosen_action] = 1.0
                     agent_distributions.append(distr)
                 new_distributions.append(agent_distributions)
-            """
-            self._cached_distributions = self._generate_random_distributions()
-            return self._cached_distributions
+            return {"discrete", self._generate_random_distributions()}
         else:
             return self._generate_random_distributions()
+        """
