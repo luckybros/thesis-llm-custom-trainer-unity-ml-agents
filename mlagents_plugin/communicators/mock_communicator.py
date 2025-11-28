@@ -48,15 +48,13 @@ class MockCommunicator(LLMCommunicator):
         """
         params = {}
         for i in range(self.num_agents):
-            mean = np.random.uniform(-1, 1, self.num_continuous_action)
-            std = np.random.uniform(1e-2, 1.0, self.num_continuous_action)  # use positive std!
-            agent_distribution = [mean, std]
+            agent_distribution = []
+            means = np.random.uniform(-1, 1, self.num_continuous_action)
+            stds = np.random.uniform(1e-2, 1.0, self.num_continuous_action)  # use positive std!
+            for mean, std in zip(means, stds):
+                agent_distribution.append([mean, std])
             params[f"agent_0-{i}"] = agent_distribution
 
-        params = {
-            k: [arr.tolist() for arr in v]
-            for k, v in params.items()
-        }
         return params
     
     def encode_state(self, state):

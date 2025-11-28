@@ -47,7 +47,9 @@ class LLMSimpleActor(SimpleActor):
         run_out = {}
         run_out["log_probs"] = log_probs
         run_out["entropy"] = entropies
-        run_out["continuous_parameters"] = continuous_parameters
+        run_out["continuous_parameters"] = None
+        if continuous_parameters is not None:
+            run_out["continuous_parameters"] = continuous_parameters
         return run_out
 
 

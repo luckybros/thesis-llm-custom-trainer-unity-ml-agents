@@ -57,7 +57,7 @@ class TorchLLMPolicy(TorchPolicy):
             for agent_id in decision_requests.agent_id
         ] 
 
-        logger.info(f"llm_run_out: {llm_run_out}")
+        #logger.info(f"llm_run_out: {llm_run_out}")
 
         #logger.info(f"global_agent_ids: {global_agent_ids}")
 

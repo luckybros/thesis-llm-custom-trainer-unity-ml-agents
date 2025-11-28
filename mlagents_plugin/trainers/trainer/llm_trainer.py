@@ -169,7 +169,7 @@ class LLMTrainer(PPOTrainer):
         for key, item in llm_log_probs.items():
             agent_buffer_trajectory[key].extend(item)
 
-        logger.info(f"Trajectory: {agent_buffer_trajectory}")
+        #logger.info(f"Trajectory: {agent_buffer_trajectory}")
         self._append_to_update_buffer(agent_buffer_trajectory)
 
         # logger.info(agent_buffer_trajectory)

@@ -89,7 +89,10 @@ class TorchLLMOptimizer(TorchPPOOptimizer):
 
         log_probs = run_out["log_probs"]
         entropy = run_out["entropy"]
-        continuous_parameters = run_out["continuous_parameters"]
+        continuous_log_probs = run_out["continuous_parameters"]
+
+        # Net output
+        #logger.info(f"continuous_parameters: {continuous_log_probs}")
 
         values, _ = self.critic.critic_pass(
             current_obs,
@@ -105,16 +108,19 @@ class TorchLLMOptimizer(TorchPPOOptimizer):
             llm_discrete_log_probs = ModelUtils.list_to_tensor(
                 batch[LLMBufferKey.LLM_LOG_DISCRETE_LOG_PROBS]
             )
+            llm_discrete_log_probs = LLMUtils.tensor3d_to_list_of_2d(llm_discrete_log_probs)
+
         if LLMBufferKey.LLM_LOG_CONTINUOUS_LOG_PROBS in batch:
+            #logger.info(f"llm_continuous_log_probs pre : {llm_continuous_log_probs}")
             llm_continuous_log_probs = ModelUtils.list_to_tensor(
                 batch[LLMBufferKey.LLM_LOG_CONTINUOUS_LOG_PROBS]
             )
+            llm_continuous_log_probs = LLMUtils.tensor3d_to_list_of_2d(llm_continuous_log_probs)
+            #logger.info(f"llm_continuous_log_probs after : {llm_continuous_log_probs}")
             
-        logger.info(f"llm_continuous_log_probs: {llm_continuous_log_probs}")
         # At this point, llm_discrete_log_probs is a 3D tensor with this dimentions: [timestamp][action_type][action_dist]
         # We should it became a list of 2d tensor on the actions.
         #logger.info(f"llm_discrete_log_probs pre: {llm_discrete_log_probs}")
-        llm_discrete_log_probs = LLMUtils.tensor3d_to_list_of_2d(llm_discrete_log_probs)
         #logger.info(f"llm_discrete_log_probs pre: {llm_discrete_log_probs}")
 
         old_log_probs = ActionLogProbs.from_buffer(batch)
@@ -138,16 +144,17 @@ class TorchLLMOptimizer(TorchPPOOptimizer):
         
         # all_discrete_list restituisce una lista di tensori, un tensore per azione!
         # devo fare lo stesso per l'LLM che attualmente non raggruppa tutte le prob per azione 
-        log_probs = log_probs.all_discrete_list
-
+        discrete_log_probs = log_probs.all_discrete_list
+        if continuous_log_probs is not None:
+            continuous_log_probs = LLMUtils.continuous_net_parameters_transform(continuous_log_probs)
         #logger.info(f"current_obs: {current_obs}")
         #logger.info(f"action: {actions}")
         #logger.info(f"log_probs in Optimizer: {log_probs}")
         #logger.info(f"llm_discrete_log_probs in Optimizer: {llm_discrete_log_probs}")
         #assert log_probs[0].shape == llm_discrete_log_probs[0].shape
-        llm_loss = LLMUtils.calculate_kl_distance(log_probs, llm_discrete_log_probs)
+        llm_loss = LLMUtils.calculate_kl_distance(discrete_log_probs, llm_discrete_log_probs, continuous_log_probs, llm_continuous_log_probs)
 
-        # logger.info(f"LLM Loss: {llm_loss}")
+        #logger.info(f"LLM Loss: {llm_loss}")
         loss = (
             policy_loss
             + 0.5 * value_loss
@@ -155,6 +162,7 @@ class TorchLLMOptimizer(TorchPPOOptimizer):
             - decay_bet * ModelUtils.masked_mean(entropy, loss_masks)
         )
 
+        #logger.info(f"Loss: {loss}")
         # Set optimizer learning rate
         ModelUtils.update_learning_rate(self.optimizer, decay_lr)
 
