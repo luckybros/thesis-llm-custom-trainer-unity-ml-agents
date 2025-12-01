@@ -30,6 +30,7 @@ class TorchLLMPolicy(TorchPolicy):
         network_settings: NetworkSettings,
         actor_cls: type,
         actor_kwargs: Dict[str, Any],
+        communicator_cls: type
     ):
         
         super().__init__(seed, behavior_spec, network_settings, actor_cls, actor_kwargs)
@@ -40,7 +41,8 @@ class TorchLLMPolicy(TorchPolicy):
         self.num_agents : int = None
         # qua si puo fare cls nel costruttore e specificare il client da iperparametro
         # logger.info(f"observation_specs : {behavior_spec.observation_specs}")
-        self.communicator_client : RandomCommunicationClient = None
+        self._communicator_cls = communicator_cls
+        self.communicator_client = None
         self.agent_llm_buffers: Dict[str, LLMBuffer] = {}
         
 
@@ -100,7 +102,7 @@ class TorchLLMPolicy(TorchPolicy):
         #logger.info(f"num_agents: {num_agents}")
 
         if self.communicator_client is None:
-            self.communicator_client = RandomCommunicationClient(discrete_branches=self.action_spec.discrete_branches, num_continuous_action=self.num_continuous_action, num_agents=num_agents)
+            self.communicator_client = self._communicator_cls(discrete_branches=self.action_spec.discrete_branches, num_continuous_action=self.num_continuous_action, num_agents=num_agents)
         masks = self._extract_masks(decision_requests)
 
         # Le azioni devono essere di tipo AgentAction, mentre le distribuzioni di tipo DistInstances, e le log_probs di tipo ActionLogProbs (bisogna scrivere un util sicuramente)

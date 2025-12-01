@@ -10,3 +10,5 @@ results/
 myenv/
 *.pyc
 *.yaml
+!3Dball.yaml
+!Basic.yaml

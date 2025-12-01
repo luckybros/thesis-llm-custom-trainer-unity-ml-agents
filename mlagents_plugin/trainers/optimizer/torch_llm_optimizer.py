@@ -1,5 +1,7 @@
-from typing import Dict
-from mlagents.trainers.ppo.optimizer_torch import TorchPPOOptimizer
+from typing import Dict, cast
+
+import attr
+from mlagents.trainers.ppo.optimizer_torch import TorchPPOOptimizer, PPOSettings
 from mlagents.trainers.settings import (
     TrainerSettings,
     OnPolicyHyperparamSettings,
@@ -16,16 +18,23 @@ from mlagents.trainers.torch_entities.action_log_probs import ActionLogProbs
 from mlagents_plugin.utils.llm_utils import LLMUtils
 from mlagents_plugin.trainers.policy.llm_policy import TorchLLMPolicy
 from mlagents_envs.logging_util import get_logger
+from mlagents_plugin.trainers.settings import CommunicatorType
+
 
 logger = get_logger(__name__)
 
+@attr.s(auto_attribs=True)
+class LLMSettings(PPOSettings):
+    alpha : float = 0.1
+    communicator : CommunicatorType = CommunicatorType.RANDOM
+    
 class TorchLLMOptimizer(TorchPPOOptimizer):
-
     def __init__(self, policy: TorchLLMPolicy, trainer_settings: TrainerSettings):
-
         super().__init__(policy, trainer_settings)
-
-        self.alpha = 0.1
+        self.hyperparameters: LLMSettings = cast(
+            LLMSettings, trainer_settings.hyperparameters
+        )
+        self.alpha = self.hyperparameters.alpha
         """
         Eventualmente,
         per alpha relativo alla distanza,

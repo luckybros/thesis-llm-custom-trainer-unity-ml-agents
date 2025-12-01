@@ -17,10 +17,12 @@ from mlagents.trainers.ppo.optimizer_torch import PPOSettings
 from mlagents.trainers.ppo.trainer import PPOTrainer
 from mlagents.trainers.torch_entities.networks import SimpleActor, SharedActorCritic
 from mlagents_plugin.trainers.torch_entities.networks import LLMSimpleActor, LLMSharedActorCritic
-
+from mlagents_plugin.communicators.random_communication_client import RandomCommunicationClient
+from mlagents_plugin.communicators.zmq_communicator_client import ZMQCommunicatorClient
+from mlagents_plugin.trainers.settings import CommunicatorType
 
 from mlagents_plugin.trainers.policy.llm_policy import TorchLLMPolicy
-from mlagents_plugin.trainers.optimizer.torch_llm_optimizer import TorchLLMOptimizer
+from mlagents_plugin.trainers.optimizer.torch_llm_optimizer import TorchLLMOptimizer, LLMSettings
 
 logger = get_logger(__name__)
 
@@ -49,6 +51,10 @@ class LLMTrainer(PPOTrainer):
             artifact_path
         )
 
+        self.hyperparameters: LLMSettings = cast(
+            LLMSettings, self.trainer_settings.hyperparameters
+        )
+        self.communicator_type = self.hyperparameters.communicator
         self.policy: TorchLLMPolicy = None
 
     def _process_trajectory(self, trajectory: Trajectory) -> None:
@@ -200,12 +206,19 @@ class LLMTrainer(PPOTrainer):
             actor_cls = LLMSharedActorCritic
             actor_kwargs.update({"stream_names": reward_signal_names})
 
+        communicator_cls: Union[Type[RandomCommunicationClient], Type[ZMQCommunicatorClient]] = RandomCommunicationClient
+        if self.communicator_type == CommunicatorType.RANDOM: 
+            communicator_cls = RandomCommunicationClient
+        if self.communicator_type == CommunicatorType.ZMQ:
+            communicator_cls = ZMQCommunicatorClient
+            
         policy = TorchLLMPolicy(
             self.seed,
             behavior_spec,
             self.trainer_settings.network_settings,
             actor_cls,
             actor_kwargs,
+            communicator_cls
         )
         
         return policy
@@ -216,5 +229,5 @@ class LLMTrainer(PPOTrainer):
 
 def get_type_and_setting():
     return {LLMTrainer.get_trainer_name(): LLMTrainer}, {
-        LLMTrainer.get_trainer_name(): PPOSettings  # eventualmente riscrivere i settings per aggiungere iperparametro alpha
+        LLMTrainer.get_trainer_name(): LLMSettings  # eventualmente riscrivere i settings per aggiungere iperparametro alpha
     }
