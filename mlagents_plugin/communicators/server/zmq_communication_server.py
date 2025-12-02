@@ -3,9 +3,11 @@ import json
 import argparse
 import yaml
 from mlagents_plugin.communicators.action_generator.mock_action_generator import MockActionGenerator
+from mlagents_plugin.communicators.action_generator.langchain_action_generator import LangchainActionGenerator
 
 ACTION_GENERATOR_REGISTRY = {
     "mock": MockActionGenerator,
+    "lang": LangchainActionGenerator
 }
 
 class ZMQCommunicatorServer:
@@ -29,8 +31,8 @@ class ZMQCommunicatorServer:
             return json.dumps(payload)
 
         states = data["states"]
-        text_states = [self.action_generator.encode_state(state) for state in states]
-        llm_policy = self.action_generator.get_llm_policy(text_states)
+        #text_states = [self.action_generator.encode_state(state) for state in states]
+        llm_policy = self.action_generator.get_llm_policy(states)
         return llm_policy
 
 

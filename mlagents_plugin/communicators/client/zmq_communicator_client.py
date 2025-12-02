@@ -20,8 +20,9 @@ class ZMQCommunicatorClient(BaseCommunicationClient):
         self.socket.recv_json()
 
     def recieve_action_from_llm(self, obs):
+        obs = obs[0]    # you have obs with different type of observation, for example visual. for now we obtain only the vector
         payload = {
-            "states": [state.tolist()] for state in obs
+            "states": {f"agent_{i}": state.tolist() for i, state in enumerate(obs)}
         }
         self.socket.send_json(payload)
         data = self.socket.recv_json()

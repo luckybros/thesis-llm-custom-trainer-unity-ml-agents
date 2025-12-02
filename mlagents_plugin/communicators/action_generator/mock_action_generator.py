@@ -8,9 +8,7 @@ class MockActionGenerator(LLMActionGenerator):
         """
         We tell the communicator how many actions he can take
         """
-        self.discrete_branches = discrete_branches
-        self.num_continuous_action = num_continuous_action
-        self.num_agents = num_agents
+        super().__init__(discrete_branches, num_continuous_action, num_agents)
         self.reevaluation_interval = 100
         self._call_count = 0
         # Uniform distribution for every branch
@@ -63,11 +61,13 @@ class MockActionGenerator(LLMActionGenerator):
         """
         In the mock communicator we return a random distribution over the action space, and we choose one every 100 action
         """
+        #print(f"state format: {text_state}")
         payload = {}
         if len(self.discrete_branches) > 0:
             payload["discrete"] = self._generate_random_distributions()
         if self.num_continuous_action > 0:
             payload["continuous"] = self._generate_random_continuous_params()
+        print(payload)
         return payload
         """
         # Ogni 100 passi usa le distribuzioni dell'utente
