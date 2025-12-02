@@ -1,5 +1,5 @@
 import json
-from mlagents_plugin.communicators.mock_communication_server import MockCommunicationServer
+from mlagents_plugin.communicators.server.mock_communication_server import MockCommunicationServer
 
 m = MockCommunicationServer()
 mock_payload = {

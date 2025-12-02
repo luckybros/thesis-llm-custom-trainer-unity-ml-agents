@@ -2,7 +2,7 @@
 
 import socket
 import json
-from .base_communication_client import BaseCommunicationClient
+from mlagents_plugin.communicators.client.base_communication_client import BaseCommunicationClient
 
 class MockCommunicationClient(BaseCommunicationClient):
 

@@ -1,5 +1,5 @@
 import zmq
-from mlagents_plugin.communicators.base_communication_client import BaseCommunicationClient
+from mlagents_plugin.communicators.client.base_communication_client import BaseCommunicationClient
 
 class ZMQCommunicatorClient(BaseCommunicationClient):
 

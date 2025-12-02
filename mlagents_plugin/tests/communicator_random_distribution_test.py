@@ -1,4 +1,4 @@
-from mlagents_plugin.communicators.mock_communicator import MockCommunicator
+from mlagents_plugin.communicators.action_generator.mock_action_generator import MockCommunicator
 
 m = MockCommunicator((3, 2), 2) # example with two different options for each branch of the action and two agents
 

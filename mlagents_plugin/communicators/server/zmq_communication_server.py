@@ -1,33 +1,45 @@
 import zmq 
 import json
-from mlagents_plugin.communicators.mock_communicator import MockCommunicator
+import argparse
+import yaml
+from mlagents_plugin.communicators.action_generator.mock_action_generator import MockActionGenerator
+
+ACTION_GENERATOR_REGISTRY = {
+    "mock": MockActionGenerator,
+}
 
 class ZMQCommunicatorServer:
 
-    def __init__(self):
+    def __init__(self, action_generator_type: str):
         self.HOST = "127.0.0.1"
         self.PORT = 65432
-        self.communicator : MockCommunicator = None
+        self.action_generator_type = action_generator_type
+        self.act_gen_cls = ACTION_GENERATOR_REGISTRY[action_generator_type]
+        self.action_generator = None
 
     def handle_client_logic(self, data):
-        print(f'Recieved: {data}')
-        if self.communicator is None:
+        # print(type(data)) è un dict
+        if self.action_generator is None:
             payload = {"response": "OK"}
             if data.get("type") == "init":
                 discrete_branches = tuple(data["discrete_branches"])
                 num_agents = data["num_agents"]
                 num_continuous_actions = data["num_continuous_actions"]
-                self.communicator = MockCommunicator(discrete_branches=discrete_branches, num_continuous_action=num_continuous_actions, num_agents=num_agents)
+                self.action_generator = self.act_gen_cls(discrete_branches=discrete_branches, num_continuous_action=num_continuous_actions, num_agents=num_agents)
             return json.dumps(payload)
 
         states = data["states"]
-        text_states = [self.communicator.encode_state(state) for state in states]
-        llm_policy = self.communicator.get_llm_policy(text_states)
+        text_states = [self.action_generator.encode_state(state) for state in states]
+        llm_policy = self.action_generator.get_llm_policy(text_states)
         return llm_policy
 
 
 def main():
-    server = ZMQCommunicatorServer()
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--actgen", type=str, choices=ACTION_GENERATOR_REGISTRY.keys(), default="mock", help="Type of action generator")
+    args = parser.parse_args()
+
+    server = ZMQCommunicatorServer(action_generator_type=args.actgen)
     context = zmq.Context()
     socket = context.socket(zmq.REP)
     socket.bind(f"tcp://{server.HOST}:{server.PORT}")

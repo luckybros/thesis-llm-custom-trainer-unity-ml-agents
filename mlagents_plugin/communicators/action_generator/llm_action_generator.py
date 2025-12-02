@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 
-class LLMCommunicator(ABC):
+class LLMActionGenerator(ABC):
 
     @abstractmethod
     def encode_state(self, state):

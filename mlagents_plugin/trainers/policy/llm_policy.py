@@ -14,8 +14,8 @@ from mlagents_envs.base_env import BehaviorSpec, DecisionSteps, ActionTuple
 from mlagents.trainers.settings import NetworkSettings
 from mlagents.trainers.torch_entities.networks import GlobalSteps
 from mlagents_envs.timers import timed
-from mlagents_plugin.communicators.mock_communication_client import MockCommunicationClient
-from mlagents_plugin.communicators.random_communication_client import RandomCommunicationClient
+from mlagents_plugin.communicators.client.mock_communication_client import MockCommunicationClient
+from mlagents_plugin.communicators.client.random_communication_client import RandomCommunicationClient
 from mlagents_plugin.trainers.llm_buffer import LLMBuffer, LLMBufferKey
 from mlagents_plugin.utils.llm_utils import LLMUtils
 from mlagents.trainers.torch_entities.utils import ModelUtils

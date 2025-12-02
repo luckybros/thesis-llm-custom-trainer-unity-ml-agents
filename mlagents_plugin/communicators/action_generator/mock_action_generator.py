@@ -1,15 +1,14 @@
 from typing import Dict, List
 import numpy as np
-from mlagents_plugin.communicators.llm_communicator_interface import LLMCommunicator
+from mlagents_plugin.communicators.action_generator.llm_action_generator import LLMActionGenerator
 
-class MockCommunicator(LLMCommunicator):
+class MockActionGenerator(LLMActionGenerator):
 
     def __init__(self, discrete_branches: tuple[int], num_continuous_action: int, num_agents: int):
         """
         We tell the communicator how many actions he can take
         """
         self.discrete_branches = discrete_branches
-        print(f"AAAA: {self.discrete_branches}")
         self.num_continuous_action = num_continuous_action
         self.num_agents = num_agents
         self.reevaluation_interval = 100

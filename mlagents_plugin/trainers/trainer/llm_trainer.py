@@ -17,8 +17,8 @@ from mlagents.trainers.ppo.optimizer_torch import PPOSettings
 from mlagents.trainers.ppo.trainer import PPOTrainer
 from mlagents.trainers.torch_entities.networks import SimpleActor, SharedActorCritic
 from mlagents_plugin.trainers.torch_entities.networks import LLMSimpleActor, LLMSharedActorCritic
-from mlagents_plugin.communicators.random_communication_client import RandomCommunicationClient
-from mlagents_plugin.communicators.zmq_communicator_client import ZMQCommunicatorClient
+from mlagents_plugin.communicators.client.random_communication_client import RandomCommunicationClient
+from mlagents_plugin.communicators.client.zmq_communicator_client import ZMQCommunicatorClient
 from mlagents_plugin.trainers.settings import CommunicatorType
 
 from mlagents_plugin.trainers.policy.llm_policy import TorchLLMPolicy

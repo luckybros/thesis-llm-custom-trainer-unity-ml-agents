@@ -1,14 +1,14 @@
 import socket
 import json
 
-from mock_communicator import MockCommunicator
+from mlagents_plugin.communicators.action_generator.mock_action_generator import MockActionGenerator
 
 class MockCommunicationServer:
 
     def __init__(self):
         self.HOST = "127.0.0.1"
         self.PORT = 65432
-        self.communicator : MockCommunicator = None
+        self.communicator : MockActionGenerator = None
 
     def handle_client_logic(self, data):
 
@@ -19,7 +19,7 @@ class MockCommunicationServer:
             if request_json.get("type") == "init":
                 discrete_branches = tuple(request_json["discrete_branches"])
                 num_agents = request_json["num_agents"]
-                self.communicator = MockCommunicator(discrete_branches=discrete_branches, num_agents=num_agents)
+                self.communicator = MockActionGenerator(discrete_branches=discrete_branches, num_agents=num_agents)
             return json.dumps(payload).encode('utf-8')
 
         states = request_json["states"]
