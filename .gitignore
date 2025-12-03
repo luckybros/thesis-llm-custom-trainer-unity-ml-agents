@@ -12,3 +12,5 @@ myenv/
 *.yaml
 !3Dball.yaml
 !Basic.yaml
+!BasicLLM.yaml
+!BasicLLMProva.yaml
