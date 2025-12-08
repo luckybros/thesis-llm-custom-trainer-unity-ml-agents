@@ -11,7 +11,7 @@ behaviors:
       lambd: 0.99
       num_epoch: 3
       learning_rate_schedule: linear
-      communicator: zmq
+      communicator: random
     network_settings:
       normalize: true
       hidden_units: 128

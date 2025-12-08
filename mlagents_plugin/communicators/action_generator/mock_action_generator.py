@@ -67,7 +67,6 @@ class MockActionGenerator(LLMActionGenerator):
             payload["discrete"] = self._generate_random_distributions()
         if self.num_continuous_action > 0:
             payload["continuous"] = self._generate_random_continuous_params()
-        print(payload)
         return payload
         """
         # Ogni 100 passi usa le distribuzioni dell'utente

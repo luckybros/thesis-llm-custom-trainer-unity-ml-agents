@@ -12,6 +12,8 @@ class LLMBufferKey(enum.Enum):
     """
     LLM_LOG_CONTINUOUS_LOG_PROBS = "llm_continuous_log_probs"
     LLM_LOG_DISCRETE_LOG_PROBS = "llm_discrete_log_probs"
+    LLM_MASK_CONTINUOUS = "llm_mask_continuous"
+    LLM_MASK_DISCRETE = "llm_mask_discrete"
 
 
 class LLMBuffer:

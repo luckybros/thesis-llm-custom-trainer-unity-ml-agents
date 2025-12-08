@@ -1,3 +1,5 @@
+from typing import List, Union
+import numpy as np
 import torch
 import torch.nn.functional as F
 from torch.distributions import Categorical, Normal, kl_divergence
@@ -80,3 +82,36 @@ class LLMUtils:
             out.append(torch.cat([mean_col, std_col], dim=1))
         return out
     
+    @staticmethod
+    def clean_ndarray_list(ndarray_list):
+        """
+        Restituisce una nuova lista composta solo dagli item NON vuoti:
+        - Elimina item che sono liste vuote []
+        - Elimina item che sono array numpy di shape (0,)
+        """
+        out = []
+        for elem in ndarray_list:
+            # Se è una lista vuota
+            if isinstance(elem, list) and len(elem) == 0:
+                continue
+            # Se è un array numpy vuoto
+            if isinstance(elem, np.ndarray) and elem.size == 0:
+                continue
+            # Se è una lista annidata, escludi anche [ [] ]
+            if isinstance(elem, list) and len(elem) == 1 and isinstance(elem[0], list) and len(elem[0]) == 0:
+                continue
+            out.append(elem)
+        return out
+    
+    @staticmethod 
+    def filter_log_probs(discrete_log_probs: List[torch.Tensor], mask: Union[List[int], torch.Tensor]) -> List[torch.Tensor]:
+        """
+        Prende una lista di tensori [T, num_branches] (uno per azione)
+        e una mask binaria (lunghezza T) e ritorna la lista di tensori filtrati solo sugli step dove mask==1
+        """
+        # Assicurati che la mask sia torch tensor booleano
+        mask_tensor = torch.as_tensor(mask).bool()
+        filtered = [
+            x[mask_tensor] for x in discrete_log_probs
+        ]
+        return filtered

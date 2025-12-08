@@ -90,6 +90,7 @@ class LangchainActionGenerator(LLMActionGenerator):
 
     def _generate_actions(self, obs):
         # the call at the llm should give a choice option for every branch
+        print(f"obs: {obs}")
         return self.chain.invoke({
             "task": self.settings.task, 
             "actions": self.settings.actions,

@@ -20,13 +20,13 @@ from mlagents_plugin.trainers.policy.llm_policy import TorchLLMPolicy
 from mlagents_envs.logging_util import get_logger
 from mlagents_plugin.trainers.settings import CommunicatorType
 
-
 logger = get_logger(__name__)
 
 @attr.s(auto_attribs=True)
 class LLMSettings(PPOSettings):
     alpha : float = 0.1
     communicator : CommunicatorType = CommunicatorType.RANDOM
+    llm_refresh_interval : int = 10
     
 class TorchLLMOptimizer(TorchPPOOptimizer):
     def __init__(self, policy: TorchLLMPolicy, trainer_settings: TrainerSettings):
@@ -113,19 +113,21 @@ class TorchLLMOptimizer(TorchPPOOptimizer):
         llm_continuous_log_probs = None
         
         # Eventually write a static method of a class that does that
+        # Just discovered that we could get the batch directly, without let it be
+        # a tensor again, so this i kinda useless
         if LLMBufferKey.LLM_LOG_DISCRETE_LOG_PROBS in batch:
-            llm_discrete_log_probs = ModelUtils.list_to_tensor(
-                batch[LLMBufferKey.LLM_LOG_DISCRETE_LOG_PROBS]
-            )
+            clean_batch = LLMUtils.clean_ndarray_list(batch[LLMBufferKey.LLM_LOG_DISCRETE_LOG_PROBS])
+            llm_discrete_log_probs = ModelUtils.list_to_tensor(clean_batch)
             llm_discrete_log_probs = LLMUtils.tensor3d_to_list_of_2d(llm_discrete_log_probs)
 
+        
         if LLMBufferKey.LLM_LOG_CONTINUOUS_LOG_PROBS in batch:
             #logger.info(f"llm_continuous_log_probs pre : {llm_continuous_log_probs}")
-            llm_continuous_log_probs = ModelUtils.list_to_tensor(
-                batch[LLMBufferKey.LLM_LOG_CONTINUOUS_LOG_PROBS]
-            )
+            clean_batch = LLMUtils.clean_ndarray_list(batch[LLMBufferKey.LLM_LOG_CONTINUOUS_LOG_PROBS])
+            llm_continuous_log_probs = ModelUtils.list_to_tensor(clean_batch)
             llm_continuous_log_probs = LLMUtils.tensor3d_to_list_of_2d(llm_continuous_log_probs)
             #logger.info(f"llm_continuous_log_probs after : {llm_continuous_log_probs}")
+
             
         # At this point, llm_discrete_log_probs is a 3D tensor with this dimentions: [timestamp][action_type][action_dist]
         # We should it became a list of 2d tensor on the actions.
@@ -151,11 +153,21 @@ class TorchLLMOptimizer(TorchPPOOptimizer):
             decay_eps,
         )
         
-        # all_discrete_list restituisce una lista di tensori, un tensore per azione!
-        # devo fare lo stesso per l'LLM che attualmente non raggruppa tutte le prob per azione 
+        # Da qui devo ottenere le probs solo nei punti in cui ho ottenuto le probs dell'
+        # LLM
+
         discrete_log_probs = log_probs.all_discrete_list
+        if LLMBufferKey.LLM_MASK_DISCRETE in batch:
+            mask_batch = batch[LLMBufferKey.LLM_MASK_DISCRETE]
+            discrete_log_probs = LLMUtils.filter_log_probs(discrete_log_probs, mask_batch)
+
         if continuous_log_probs is not None:
             continuous_log_probs = LLMUtils.continuous_net_parameters_transform(continuous_log_probs)
+            #logger.info(f"continuous_log_probs: {continuous_log_probs}")
+        
+        if LLMBufferKey.LLM_MASK_CONTINUOUS in batch:
+            mask_batch = batch[LLMBufferKey.LLM_MASK_CONTINUOUS]
+            continuous_log_probs = LLMUtils.filter_log_probs(continuous_log_probs, mask_batch)
         #logger.info(f"current_obs: {current_obs}")
         #logger.info(f"action: {actions}")
         #logger.info(f"log_probs in Optimizer: {log_probs}")

@@ -65,6 +65,8 @@ class LLMTrainer(PPOTrainer):
         """
         # RL Trainer, we copy and paste bc if we called super()._process_trajectory it
         # would save all buffer without the LLM's log probs
+
+
         self._maybe_write_summary(self.get_step + len(trajectory.steps))
         self._maybe_save_model(self.get_step + len(trajectory.steps))
         self._increment_step(len(trajectory.steps), trajectory.behavior_id)
@@ -172,10 +174,10 @@ class LLMTrainer(PPOTrainer):
         #if not isinstance(llm_log_probs, dict):
         #    logger.warning(f"Attenzione: llm_log_probs non è un dict ma {type(llm_log_probs)}!")
 
+
         for key, item in llm_log_probs.items():
             agent_buffer_trajectory[key].extend(item)
 
-        #logger.info(f"Trajectory: {agent_buffer_trajectory}")
         self._append_to_update_buffer(agent_buffer_trajectory)
 
         # logger.info(agent_buffer_trajectory)
@@ -218,7 +220,8 @@ class LLMTrainer(PPOTrainer):
             self.trainer_settings.network_settings,
             actor_cls,
             actor_kwargs,
-            communicator_cls
+            communicator_cls,
+            self.hyperparameters.llm_refresh_interval
         )
         
         return policy
