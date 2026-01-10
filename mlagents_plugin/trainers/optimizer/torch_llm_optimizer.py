@@ -27,6 +27,7 @@ class LLMSettings(PPOSettings):
     alpha : float = 0.1
     communicator : CommunicatorType = CommunicatorType.RANDOM
     llm_refresh_interval : int = 10
+    is_visual: bool = False
     
 class TorchLLMOptimizer(TorchPPOOptimizer):
     def __init__(self, policy: TorchLLMPolicy, trainer_settings: TrainerSettings):
@@ -111,21 +112,28 @@ class TorchLLMOptimizer(TorchPPOOptimizer):
 
         llm_discrete_log_probs = None
         llm_continuous_log_probs = None
+
+        has_llm_data = False
         
         # Eventually write a static method of a class that does that
         # Just discovered that we could get the batch directly, without let it be
         # a tensor again, so this i kinda useless
         if LLMBufferKey.LLM_LOG_DISCRETE_LOG_PROBS in batch:
             clean_batch = LLMUtils.clean_ndarray_list(batch[LLMBufferKey.LLM_LOG_DISCRETE_LOG_PROBS])
-            llm_discrete_log_probs = ModelUtils.list_to_tensor(clean_batch)
-            llm_discrete_log_probs = LLMUtils.tensor3d_to_list_of_2d(llm_discrete_log_probs)
+            if clean_batch:
+                llm_discrete_log_probs = ModelUtils.list_to_tensor(clean_batch)
+                llm_discrete_log_probs = LLMUtils.tensor3d_to_list_of_2d(llm_discrete_log_probs)
+                has_llm_data = True
+            
 
         
         if LLMBufferKey.LLM_LOG_CONTINUOUS_LOG_PROBS in batch:
             #logger.info(f"llm_continuous_log_probs pre : {llm_continuous_log_probs}")
             clean_batch = LLMUtils.clean_ndarray_list(batch[LLMBufferKey.LLM_LOG_CONTINUOUS_LOG_PROBS])
-            llm_continuous_log_probs = ModelUtils.list_to_tensor(clean_batch)
-            llm_continuous_log_probs = LLMUtils.tensor3d_to_list_of_2d(llm_continuous_log_probs)
+            if clean_batch:
+                llm_continuous_log_probs = ModelUtils.list_to_tensor(clean_batch)
+                llm_continuous_log_probs = LLMUtils.tensor3d_to_list_of_2d(llm_continuous_log_probs)
+                has_llm_data = True
             #logger.info(f"llm_continuous_log_probs after : {llm_continuous_log_probs}")
 
             
@@ -157,23 +165,29 @@ class TorchLLMOptimizer(TorchPPOOptimizer):
         # LLM
 
         discrete_log_probs = log_probs.all_discrete_list
-        if LLMBufferKey.LLM_MASK_DISCRETE in batch:
-            mask_batch = batch[LLMBufferKey.LLM_MASK_DISCRETE]
-            discrete_log_probs = LLMUtils.filter_log_probs(discrete_log_probs, mask_batch)
+
+        if discrete_log_probs:
+            if LLMBufferKey.LLM_MASK_DISCRETE in batch:
+                mask_batch = batch[LLMBufferKey.LLM_MASK_DISCRETE]
+                discrete_log_probs = LLMUtils.filter_log_probs(discrete_log_probs, mask_batch)
 
         if continuous_log_probs is not None:
             continuous_log_probs = LLMUtils.continuous_net_parameters_transform(continuous_log_probs)
             #logger.info(f"continuous_log_probs: {continuous_log_probs}")
         
-        if LLMBufferKey.LLM_MASK_CONTINUOUS in batch:
-            mask_batch = batch[LLMBufferKey.LLM_MASK_CONTINUOUS]
-            continuous_log_probs = LLMUtils.filter_log_probs(continuous_log_probs, mask_batch)
+        if continuous_log_probs is not None:
+            if LLMBufferKey.LLM_MASK_CONTINUOUS in batch:
+                mask_batch = batch[LLMBufferKey.LLM_MASK_CONTINUOUS]
+                continuous_log_probs = LLMUtils.filter_log_probs(continuous_log_probs, mask_batch)
         #logger.info(f"current_obs: {current_obs}")
         #logger.info(f"action: {actions}")
         #logger.info(f"log_probs in Optimizer: {log_probs}")
         #logger.info(f"llm_discrete_log_probs in Optimizer: {llm_discrete_log_probs}")
         #assert log_probs[0].shape == llm_discrete_log_probs[0].shape
-        llm_loss = LLMUtils.calculate_kl_distance(discrete_log_probs, llm_discrete_log_probs, continuous_log_probs, llm_continuous_log_probs)
+        llm_loss = 0.0
+
+        if has_llm_data:
+            llm_loss = LLMUtils.calculate_kl_distance(discrete_log_probs, llm_discrete_log_probs, continuous_log_probs, llm_continuous_log_probs)
 
         #logger.info(f"LLM Loss: {llm_loss}")
         loss = (

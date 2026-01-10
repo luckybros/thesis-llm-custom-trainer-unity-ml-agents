@@ -7,7 +7,6 @@ from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
 #from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.output_parsers import StrOutputParser
-from langchain.schema.runnable import RunnableLambda
 import re
 
 load_dotenv()
@@ -25,31 +24,32 @@ class LangchainActionGenerator(LLMActionGenerator):
         self.history : List[str] = []   # it could make sense have an history for agent
 
         # Configuratin messages
-        system_msg = f"""
+        self.system_msg = f"""
             [Game Overview] \n {self.settings.game_desc} \n\n",
             [Role and function] \n {self.settings.agent_role}"
         """
         # aggiungere nel template immagini
 
-        human_msg = """
+        self.human_msg = """
             [Current Task] \n {task} \n\n", 
             [Action Set] \n Available actions: {actions} \n\n", 
             [History] \n {history} \n\n",
-            [Observations] \n {observations} \n\n",
-            Given these information, return the next action you would take."
         """
 
         """
-        self.prompt_template = ChatPromptTemplate.from_messages([
-            ("system", system_msg),
-            ("human", human_msg)
-        ])
+        [Current Observations] \n {observations} \n\n",
+        Given these information, return the next action you would take."
         """
+        
+
+        #self.prompt_template = ChatPromptTemplate.from_messages([
+        #    ("system", system_msg),
+        #    ("human", human_msg)
+        #])
 
         self.model = self.settings.model_constructor_generator()
 
-        # Chain dinamica che compone il messaggio a seconda del fatto che sia solo visual, visual + vect o solo vect
-        self.chain = self.prompt_template | self.model | StrOutputParser()
+        # self.chain = self.prompt_template | self.model | StrOutputParser()
 
     def update_history(self, observation: str, action: str):
         self.history.append(f"Observation: {observation}. Action: {action}")
@@ -96,13 +96,14 @@ class LangchainActionGenerator(LLMActionGenerator):
 
     def _generate_actions(self, obs):
         # the call at the llm should give a choice option for every branch
-        print(f"obs: {obs}")
-        return self.chain.invoke({
-            "task": self.settings.task, 
-            "actions": self.settings.actions,
-            "history": self.history,
-            "observations": obs
-        })
+        #print(f"obs: {obs}")
+        content = self.
+        #return self.chain.invoke({
+        #    "task": self.settings.task, 
+        #    "actions": self.settings.actions,
+        #    "history": self.history,
+        #    "observations": obs
+        #})
     
     def _extract_actions(self, output_text: str) -> List[int]:
         """

@@ -6,6 +6,7 @@ class LLMActionGenerator(ABC):
         self.discrete_branches = discrete_branches
         self.num_continuous_action = num_continuous_action
         self.num_agents = num_agents
+        #self.is_visual = is_visual
         
     @abstractmethod
     def encode_state(self, state):

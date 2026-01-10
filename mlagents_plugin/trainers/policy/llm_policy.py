@@ -31,7 +31,8 @@ class TorchLLMPolicy(TorchPolicy):
         actor_cls: type,
         actor_kwargs: Dict[str, Any],
         communicator_cls: type,
-        llm_refresh_interval: int
+        llm_refresh_interval: int,
+        is_visual: bool
     ):
         
         super().__init__(seed, behavior_spec, network_settings, actor_cls, actor_kwargs)
@@ -49,14 +50,20 @@ class TorchLLMPolicy(TorchPolicy):
         self.agent_llm_buffers: Dict[str, LLMBuffer] = {}
         self.llm_refresh_interval = llm_refresh_interval
         self._llm_step_counter = 0
-
+        self._is_visual = is_visual
     
     def get_action(
             self, decision_requests: DecisionSteps, worker_id : int
     ) -> ActionInfo:
         # LLM part
         obs = decision_requests.obs
-        
+
+        logger.info(f"len obs: {len(decision_requests.obs)}")
+        if (len(decision_requests.obs) == 1):
+            logger.info("ONLY VECTOR")
+        elif (len(decision_requests.obs) >= 1):
+            logger.info("VECTOR AND VISUAL")
+                    
         global_agent_ids = [
             get_global_agent_id(worker_id, int(agent_id))
             for agent_id in decision_requests.agent_id
@@ -182,7 +189,7 @@ class TorchLLMPolicy(TorchPolicy):
         #logger.info(f"num_agents: {num_agents}")
 
         if self.communicator_client is None:
-            self.communicator_client = self._communicator_cls(discrete_branches=self.action_spec.discrete_branches, num_continuous_action=self.num_continuous_action, num_agents=num_agents)
+            self.communicator_client = self._communicator_cls(discrete_branches=self.action_spec.discrete_branches, num_continuous_action=self.num_continuous_action, num_agents=num_agents, is_visual=self._is_visual)
         masks = self._extract_masks(decision_requests)
 
         # Le azioni devono essere di tipo AgentAction, mentre le distribuzioni di tipo DistInstances, e le log_probs di tipo ActionLogProbs (bisogna scrivere un util sicuramente)

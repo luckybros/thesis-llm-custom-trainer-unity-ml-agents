@@ -13,6 +13,7 @@ behaviors:
       learning_rate_schedule: linear
       communicator: zmq
       llm_refresh_interval: 100
+      is_visual: True
     network_settings:
       normalize: false
       hidden_units: 20

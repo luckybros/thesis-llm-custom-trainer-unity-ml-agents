@@ -4,11 +4,11 @@ from mlagents_plugin.communicators.action_generator.llm_action_generator import 
 
 class MockActionGenerator(LLMActionGenerator):
 
-    def __init__(self, discrete_branches: tuple[int], num_continuous_action: int, num_agents: int):
+    def __init__(self, discrete_branches: tuple[int], num_continuous_action: int, num_agents: int, is_visual: bool):
         """
         We tell the communicator how many actions he can take
         """
-        super().__init__(discrete_branches, num_continuous_action, num_agents)
+        super().__init__(discrete_branches, num_continuous_action, num_agents, is_visual)
         self.reevaluation_interval = 100
         self._call_count = 0
         # Uniform distribution for every branch

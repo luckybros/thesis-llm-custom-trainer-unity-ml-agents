@@ -10,6 +10,7 @@ results/
 myenv/
 *.pyc
 *.yaml
+mlagents_trainer_plugin.egg-info/
 !3Dball.yaml
 !Basic.yaml
 !BasicLLM.yaml

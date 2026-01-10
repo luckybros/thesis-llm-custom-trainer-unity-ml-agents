@@ -26,6 +26,6 @@ llm_settings:
     In every observation, the 1 represents the agent position, and the 0 the other
     positions.
   history_length: 3
-  model_name: gemini-2.5-flash
+  model_name: openai/gpt-oss-120b
   task: Obtain the highest score
   actions: [[Do nothing, Go left, Go right]]
