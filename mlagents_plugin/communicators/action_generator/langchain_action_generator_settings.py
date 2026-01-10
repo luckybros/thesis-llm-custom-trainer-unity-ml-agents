@@ -1,9 +1,9 @@
 import yaml
-#from langchain_google_genai import ChatGoogleGenerativeAI
+from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_groq import ChatGroq
 
 MODEL_CONSTRUCTORS = {
-   # "gemini-2.5-flash": ChatGoogleGenerativeAI,
+    "gemini-2.5-flash": ChatGoogleGenerativeAI,
     "openai/gpt-oss-120b": ChatGroq,
     "meta-llama/llama-4-scout-17b-16e-instruct": ChatGroq
 }
@@ -20,9 +20,10 @@ class LangchainActionGeneratorSettings:
         self.model_name = llm_config.get('model_name', '')
         self.task = llm_config.get('task', '')
         self.actions = llm_config.get('actions', [])
-        # self.model_constructor = MODEL_CONSTRUCTORS[self.model_name]
+        self.model_constructor = MODEL_CONSTRUCTORS[self.model_name]
 
-        self.is_visual = llm_config.get('is_visual', False)
+        self.use_vectorial_obs = llm_config.get('use_vectorial_obs', False)
+        self.use_visual_obs = llm_config.get('use_visual_obs', False)
         self.batch_size = llm_config.get('batch_size', None)
 
     def model_constructor_generator(self):
@@ -30,7 +31,7 @@ class LangchainActionGeneratorSettings:
         #    return ChatGoogleGenerativeAI(model=self.model_name)
         if self.model_constructor is ChatGroq:
             # aggiungere temperatura
-            return ChatGroq(model_name=self.model_name)
-        # if self.model_constructor is ChatGoogleGenerativeAI:
-        #   return ChatGoogleGenerativeAI(model=self.model_name)
+            return ChatGroq(temperature=0, model_name=self.model_name)
+        if self.model_constructor is ChatGoogleGenerativeAI:
+           return ChatGoogleGenerativeAI(model=self.model_name)
 

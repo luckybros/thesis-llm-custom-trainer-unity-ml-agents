@@ -4,10 +4,16 @@ from mlagents_plugin.utils.image_processer import ImageProcesser
 
 class ZMQCommunicatorClient(BaseCommunicationClient):
 
-    def __init__(self, discrete_branches: tuple[int], num_continuous_action: int, num_agents: int, is_visual: bool):
-        super().__init__(discrete_branches=discrete_branches, num_continuous_action=num_continuous_action, num_agents=num_agents, is_visual=is_visual)
+    def __init__(self, discrete_branches: tuple[int], num_continuous_action: int, num_agents: int, use_vectorial_obs: bool, use_visual_obs: bool):
+        super().__init__(
+            discrete_branches=discrete_branches, 
+            num_continuous_action=num_continuous_action, 
+            num_agents=num_agents, 
+            use_vectorial_obs=use_vectorial_obs, 
+            use_visual_obs=use_visual_obs
+        )
 
-        if self.is_visual:
+        if self.use_visual_obs:
             self.image_processer = ImageProcesser()
 
         self.HOST = "127.0.0.1"
@@ -28,7 +34,7 @@ class ZMQCommunicatorClient(BaseCommunicationClient):
         # if self.is_visual:
         payload = {}
 
-        if self.is_visual:
+        if self.use_visual_obs:
             print(f"NUMERO DI IMMAGINI: {len(obs[0])}")
             visual_obs = obs[0]
             vectorial_obs = obs[1]
@@ -39,7 +45,8 @@ class ZMQCommunicatorClient(BaseCommunicationClient):
             payload["images"] = {f"agent_{i}": img_str for i, img_str in enumerate(imgs)}
 
         else:  
-            obs = obs[1]    # you have obs with different type of observation, for example visual. for now we obtain only the vector
+            if (len(obs) > 1):
+                obs = obs[1]    # you have obs with different type of observation, for example visual. for now we obtain only the vector
             payload["states"] = {f"agent_{i}": state.tolist() for i, state in enumerate(obs)}
         
         self.socket.send_json(payload)

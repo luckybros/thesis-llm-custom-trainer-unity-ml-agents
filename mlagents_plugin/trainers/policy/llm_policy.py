@@ -32,7 +32,8 @@ class TorchLLMPolicy(TorchPolicy):
         actor_kwargs: Dict[str, Any],
         communicator_cls: type,
         llm_refresh_interval: int,
-        is_visual: bool
+        use_vectorial_obs: bool,
+        use_visual_obs: bool,
     ):
         
         super().__init__(seed, behavior_spec, network_settings, actor_cls, actor_kwargs)
@@ -50,7 +51,8 @@ class TorchLLMPolicy(TorchPolicy):
         self.agent_llm_buffers: Dict[str, LLMBuffer] = {}
         self.llm_refresh_interval = llm_refresh_interval
         self._llm_step_counter = 0
-        self._is_visual = is_visual
+        self._use_vectorial_obs = use_vectorial_obs
+        self._use_visual_obs = use_visual_obs
     
     def get_action(
             self, decision_requests: DecisionSteps, worker_id : int
@@ -189,7 +191,13 @@ class TorchLLMPolicy(TorchPolicy):
         #logger.info(f"num_agents: {num_agents}")
 
         if self.communicator_client is None:
-            self.communicator_client = self._communicator_cls(discrete_branches=self.action_spec.discrete_branches, num_continuous_action=self.num_continuous_action, num_agents=num_agents, is_visual=self._is_visual)
+            self.communicator_client = self._communicator_cls(
+                discrete_branches=self.action_spec.discrete_branches, 
+                num_continuous_action=self.num_continuous_action, 
+                num_agents=num_agents, 
+                use_vectorial_obs=self._use_vectorial_obs,
+                use_visual_obs=self._use_visual_obs,
+            )
         masks = self._extract_masks(decision_requests)
 
         # Le azioni devono essere di tipo AgentAction, mentre le distribuzioni di tipo DistInstances, e le log_probs di tipo ActionLogProbs (bisogna scrivere un util sicuramente)

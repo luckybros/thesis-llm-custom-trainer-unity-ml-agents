@@ -222,7 +222,8 @@ class LLMTrainer(PPOTrainer):
             actor_kwargs,
             communicator_cls,
             self.hyperparameters.llm_refresh_interval,
-            self.hyperparameters.is_visual
+            self.hyperparameters.use_vectorial_obs,
+            self.hyperparameters.use_visual_obs,
         )
         
         return policy

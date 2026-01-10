@@ -29,7 +29,12 @@ class ZMQCommunicatorServer:
                 discrete_branches = tuple(data["discrete_branches"])
                 num_agents = data["num_agents"]
                 num_continuous_actions = data["num_continuous_actions"]
-                self.action_generator = self.act_gen_cls(discrete_branches=discrete_branches, num_continuous_action=num_continuous_actions, num_agents=num_agents, settings_path=self.config_path)
+                self.action_generator = self.act_gen_cls(
+                    discrete_branches=discrete_branches, 
+                    num_continuous_action=num_continuous_actions, 
+                    num_agents=num_agents, 
+                    settings_path=self.config_path
+            )
             return json.dumps(payload)
 
         #llm_policy, images, states = None
@@ -41,10 +46,10 @@ class ZMQCommunicatorServer:
         else:
             states = data["states"]
         """
-        states = data["states"]
+        # states = data["states"]
         
         #text_states = [self.action_generator.encode_state(state) for state in states]
-        llm_policy = self.action_generator.get_llm_policy(states)
+        llm_policy = self.action_generator.get_llm_policy(data)
         return llm_policy
 
 
