@@ -1,6 +1,8 @@
 *.egg-info/
 *.__pycache__/
 
+mlagents_plugin/config/logs_immagini/
+
 # macOS
 .DS_Store
 
