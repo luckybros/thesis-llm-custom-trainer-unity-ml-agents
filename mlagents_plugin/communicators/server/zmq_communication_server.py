@@ -49,6 +49,7 @@ class ZMQCommunicatorServer:
         # states = data["states"]
         
         #text_states = [self.action_generator.encode_state(state) for state in states]
+        print(f"state: {data}")
         llm_policy = self.action_generator.get_llm_policy(data)
         return llm_policy
 

@@ -11,7 +11,10 @@ behaviors:
       lambd: 0.99
       num_epoch: 3
       learning_rate_schedule: linear
-      communicator: random
+      communicator: zmq
+      llm_refresh_interval: 100
+      use_vectorial_obs: True
+      use_visual_obs: False
     network_settings:
       normalize: true
       hidden_units: 128

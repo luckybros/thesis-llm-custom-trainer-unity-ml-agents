@@ -4,6 +4,8 @@ llm_settings:
     small cube-shaped character to collect spheres and achieve the highest 
     possible score. At each iteration, it is possible to move in various 
     directions: there is a large sphere on the right and a small one on the left.
+    In every observation, the 1 represents the agent position, and the 0 the other
+    positions.
   agent_role: |
     You are a game AI assistant deployed in the testing 
     environment of Basic. You need to make decisions for various types of tasks 
@@ -14,18 +16,32 @@ llm_settings:
     consider the current game state and the possible outcomes after executing the 
     decision actions, and present your reasoning process and precisely return the 
     next action you will take along with the necessary parameters for that action.
-    You should choose actions for 1 agents. Indicate the agent, and then the action
+    You should choose actions for 2 agents. Indicate the agent, and then the action
     chosen for that agent.
     Always reply with the actions for each agent in the following format, one per line:
-    Agent <index>: <action>
+    Agent <index>: 
+      <action_type>
+        <action_name>
+          <action_choice>
     For example:
-    Agent 0: [Go left]
-    Agent 1: [Go right]
+    Agent 0: 
+      discrete:
+        Movement 
+          Go Left
+    Agent 1: 
+      discrete:
+        Movement
+          Go right
     Do not add extra words after the action line. Never change the format.
     (You may explain your reasoning above—but actions must appear at the end and strictly follow the format.)
-    In every observation, the 1 represents the agent position, and the 0 the other
-    positions.
   history_length: 3
   model_name: openai/gpt-oss-120b
   task: Obtain the highest score
-  actions: [[Do nothing, Go left, Go right]]
+  actions: 
+    discrete:
+      - name: Movement
+        options: [Do nothing, Go left, Go right]
+        description: >
+          Controls the character movement in the environment.
+  use_visual_obs: False
+  use_vectorial_obs: True

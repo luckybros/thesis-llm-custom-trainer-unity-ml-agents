@@ -8,20 +8,47 @@ MODEL_CONSTRUCTORS = {
     "meta-llama/llama-4-scout-17b-16e-instruct": ChatGroq
 }
 
+#class LangchainLLMResult:
+
+
 class LangchainActionGeneratorSettings:
 
     def __init__(self, settings_path: str):
         with open(settings_path, 'r') as f:
             config = yaml.safe_load(f)
-        llm_config = config.get('llm_settings')
+
+        llm_config = config.get('llm_settings', {})
         self.game_desc = llm_config.get('game_desc', '')
         self.agent_role = llm_config.get('agent_role', '')
         self.history_length = llm_config.get('history_length', 1)
         self.model_name = llm_config.get('model_name', '')
         self.task = llm_config.get('task', '')
-        self.actions = llm_config.get('actions', [])
         self.model_constructor = MODEL_CONSTRUCTORS[self.model_name]
 
+        raw_actions = llm_config.get('actions', {})
+        
+        self.actions = {
+            "discrete": {},
+            "continuous": {}
+        }
+
+        if 'discrete' in raw_actions:
+            for item in raw_actions['discrete']:
+                name = item['name']
+                self.actions["discrete"][name] = {
+                    "options": item.get('options', []),
+                    "description": item.get('description', '')
+                }
+
+        if 'continuous' in raw_actions:
+            for item in raw_actions['continuous']:
+                name = item['name']
+                self.actions["continuous"][name] = {
+                    "options": item.get('options', []),
+                    "description": item.get('description', ''),
+                    "values": item.get('values', [0.0]*len(item.get('options', [])))
+                }
+                
         self.use_vectorial_obs = llm_config.get('use_vectorial_obs', False)
         self.use_visual_obs = llm_config.get('use_visual_obs', False)
         self.batch_size = llm_config.get('batch_size', None)
@@ -34,4 +61,10 @@ class LangchainActionGeneratorSettings:
             return ChatGroq(temperature=0, model_name=self.model_name)
         if self.model_constructor is ChatGoogleGenerativeAI:
            return ChatGoogleGenerativeAI(model=self.model_name)
+        
+    def get_index_of_action(self, action: str, choice: str, continuous: bool) -> int:
+        return self.actions['continuous' if continuous else 'discrete'][action]['options'].index(choice)
+    
+    def get_continuous_value_by_index(self, action, idx) -> float:
+        return self.actions['continuous'][action]['values'][idx]
 

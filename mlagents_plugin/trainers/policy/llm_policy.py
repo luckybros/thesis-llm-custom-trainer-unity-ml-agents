@@ -200,7 +200,8 @@ class TorchLLMPolicy(TorchPolicy):
             )
         masks = self._extract_masks(decision_requests)
 
-        # Le azioni devono essere di tipo AgentAction, mentre le distribuzioni di tipo DistInstances, e le log_probs di tipo ActionLogProbs (bisogna scrivere un util sicuramente)
+        logger.info(f"num agents: {num_agents}")
+        logger.info(f"obs: {obs}")
         llm_run_out = self.communicator_client.recieve_action_from_llm(obs) # Dict[str, Any]
         return llm_run_out
         

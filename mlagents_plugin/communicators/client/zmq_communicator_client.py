@@ -47,6 +47,8 @@ class ZMQCommunicatorClient(BaseCommunicationClient):
         else:  
             if (len(obs) > 1):
                 obs = obs[1]    # you have obs with different type of observation, for example visual. for now we obtain only the vector
+            else:
+                obs = obs[0]
             payload["states"] = {f"agent_{i}": state.tolist() for i, state in enumerate(obs)}
         
         self.socket.send_json(payload)

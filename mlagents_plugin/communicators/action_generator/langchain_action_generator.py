@@ -32,12 +32,13 @@ class LangchainActionGenerator(LLMActionGenerator):
         # aggiungere nel template immagini
 
         self.human_msg = """
-            [Current Task] \n {task} \n\n, 
-            [Action Set] \n Available actions: {actions} \n\n, 
             [History] \n {history} \n\n,
-            [Vect observations] \n {observations} \n\n,
-            Given these information, return the next action you would take."
+            [Action Set] \n Available actions: {actions} \n\n, 
+            [Useful information to help decision making] \n {observations} \n\n"
+            [Task Information] \n {task} \n\n, 
         """
+
+        
 
         """
         self.prompt_template = ChatPromptTemplate.from_messages([
@@ -67,14 +68,19 @@ class LangchainActionGenerator(LLMActionGenerator):
 
         # prompt all'LLM
         llm_choice = self._generate_actions(state)
-        print(llm_choice)
+        print(f"llm_choice: {llm_choice}")
 
         # estrazione dell'azione all'LLM
-        actions = self._extract_actions(llm_choice)
+        result_actions = self._extract_actions(llm_choice)
+        print(f"result action: {result_actions}")
         # generare distribuzione di probabilità con 1 per quell'azione (per il discreto)
         payload = {}
         if len(self.discrete_branches) > 0:
-            payload["discrete"] = self._generate_discrete_distributions(actions)
+            payload["discrete"] = self._generate_discrete_distributions(result_actions)
+        if self.num_continuous_action > 0:
+            payload["continuous"] = self._generate_continuous_distribuitons(result_actions)
+
+        print(f"payload: {payload}")
         return payload
 
             
@@ -82,43 +88,145 @@ class LangchainActionGenerator(LLMActionGenerator):
         # the call at the llm should give a choice option for every branch
         return self.chain.invoke(obs)
     
-    def _extract_actions(self, output_text: str) -> List[int]:
+    def _extract_actions(self, output_text: str) -> Dict:
         """
-        Takes the str of the output of the LLM, and gives a list of list, the same
-        size of the number of action (discrete actions) and at every index it has
-        the number of the action chosen for that agent
+        Agent 0:
+            continuous:
+                Z Rotation (Steering)
+                    Rotate left
+                X Rotation (Tilt)
+                    Rotate backward
+        Agent 1:
+            continuous:
+                Z Rotation (Steering)
+                    Rotate left
+                X Rotation (Tilt)
+                    Rotate backward
+
+        Return Structure:
+        {
+            0: {  # Agent ID
+                "continuous": {
+                    "Z Rotation (Steering)": "Rotate left",
+                    "X Rotation (Tilt)": "Rotate backward"
+                },
+                "discrete": {
+                    "Move": "Right"
+                }
+            },
+            ...
+        }
         """
-        agent_regex = r'Agent\s*(\d+):\s*\[(.+?)\]'
-        matches = re.findall(agent_regex, output_text, re.IGNORECASE)
+        result = {}
+        matches = re.findall(r'Agent\s+(\d+):(.*?)(?=Agent\s+\d+:|$)', output_text, re.DOTALL)
+        if len(matches) > self.num_agents:
+            print("aggiustando matches")
+            matches = matches[self.num_agents:]
         print(f"Matches: {matches}")
-        agent_actions = [[0 for size in self.settings.actions] for _ in range(self.num_agents)]
+        # agent_actions = [[0 for size in self.settings.actions] for _ in range(self.num_agents)]
         for idx_str, acts_str in matches:
             print(f"idx: {idx_str}, acts_str: {acts_str}")
             idx = int(idx_str)
-            act_items = [a.strip() for a in acts_str.split(',')]    # list
-            print(f"act_items: {act_items}")
-            if len(act_items) != len(self.settings.actions):
-                continue 
-            for i, act in enumerate(act_items):
-                if act not in self.settings.actions[i]:
-                    continue
-                agent_actions[idx][i] = self.settings.actions[i].index(act)
-        # print(agent_actions)
-        return agent_actions
+            result[idx] = {"continuous" : {}, "discrete": {}}
+
+            # Continuous extraction
+            for act_name in self.settings.actions["continuous"].keys():
+                pattern = re.escape(act_name) + r'\s*\n\s*(.+)'
+                match = re.search(pattern, acts_str)
+
+                if match:
+                    choice = match.group(1).strip()
+                    result[idx]["continuous"][act_name] = choice
+
+            for act_name in self.settings.actions["discrete"].keys():
+                pattern = re.escape(act_name) + r'\s*\n\s*(.+)'
+                match = re.search(pattern, acts_str)
+
+                if match:
+                    choice = match.group(1).strip()
+                    result[idx]["discrete"][act_name] = choice
+
+        return result
     
-    def _generate_discrete_distributions(self, actions):
+    def _generate_discrete_distributions(self, result: Dict) -> Dict:
+        """
+        {
+            0: {  # Agent ID
+                "continuous": {
+                    "Z Rotation (Steering)": "Rotate left",
+                    "X Rotation (Tilt)": "Rotate backward"
+                },
+                "discrete": {
+                    "Move": "Right"
+                }
+            },
+        }
+        """
         distributions = {}
-        # [[2, 0], [2, 1]] agent, action
-        for idx, action in enumerate(actions):
-            # 0, [2, 0]
+
+        for idx, agent_values in enumerate(result.values()):
+
             dists_for_agent = [np.zeros(size) for size in self.discrete_branches]
-            for i, a in enumerate(action):
-                dists_for_agent[i][a] = 1.0
+            # one for agent
+            discrete_value = agent_values['discrete']
+            """
+            {
+                'Z Rotation (Steering)': 'Rotate left', 
+                'X Rotation (Tilt)': 'Rotate forward'
+            }
+            """
+            for i, (k, v) in enumerate(discrete_value.items()):
+                # k->Z Rotation (Steering), v->Rotate left
+                indx = self.settings.get_index_of_action(k, v, False)
+                dists_for_agent[i][indx] = 1.0
             distributions[f"agent_0-{idx}"] = dists_for_agent
+
         distributions = {
             k: [arr.tolist() for arr in v]
             for k, v in distributions.items()
         }
+
+        return distributions
+    
+    def _generate_continuous_distribuitons(self, result):
+        """
+        {
+            0: {  # Agent ID
+                "continuous": {
+                    "Z Rotation (Steering)": "Rotate left",
+                    "X Rotation (Tilt)": "Rotate backward"
+                },
+                "discrete": {
+                    "Move": "Right"
+                }
+            },
+        }
+        """
+        distributions = {}
+
+        for idx, agent_values in enumerate(result.values()):
+
+            dists_for_agent = [np.zeros(2) for _ in range(self.num_continuous_action)] 
+            # one for agent
+            continuous_value = agent_values['continuous']
+            """
+            {
+                'Z Rotation (Steering)': 'Rotate left', 
+                'X Rotation (Tilt)': 'Rotate forward'
+            }
+            """
+            for i, (k, v) in enumerate(continuous_value.items()):
+                # k->Z Rotation (Steering), v->Rotate left
+                indx = self.settings.get_index_of_action(k, v, True)
+                value = self.settings.get_continuous_value_by_index(k, indx)
+                dists_for_agent[i][0] = value
+            distributions[f"agent_0-{idx}"] = dists_for_agent
+
+        distributions = {
+            k: [arr.tolist() for arr in v]
+            for k, v in distributions.items()
+        }
+
         return distributions
 
     def _format_input(self, data: dict):
@@ -141,7 +249,7 @@ class LangchainActionGenerator(LLMActionGenerator):
 
         final_text = self.human_msg.format(
             task=self.settings.task,
-            actions=self.settings.actions,
+            actions=self._format_action_schema(),
             history=self.history,
             observations=observation_text
         )
@@ -159,10 +267,38 @@ class LangchainActionGenerator(LLMActionGenerator):
                     "image_url": {"url": f"data:image/png;base64,{img_b64}"}
                 })
         
+        """
+        sys_msg = SystemMessage(content=self.system_msg)
+        hum_msg = HumanMessage(content=content)
+        msg = [sys_msg, hum_msg]
+        print(f"Messaggio: {msg}")
+        return msg
+        """
         return [
             SystemMessage(content=self.system_msg),
             HumanMessage(content=content)
         ]
+
+    def _format_action_schema(self):
+        """
+        Crea una stringa formattata per l'LLM che mostra SOLO nomi e opzioni.
+        NASCONDE i valori numerici.
+        """
+        schema = ""
+        
+        if self.settings.actions.get("continuous"):
+            schema += "--- Continuous Actions ---\n"
+            for name, details in self.settings.actions["continuous"].items():
+                desc = f" ({details['description']})" if details.get('description') else ""
+                schema += f"- **{name}**{desc}: {details['options']}\n"
+
+        if self.settings.actions.get("discrete"):
+            schema += "\n--- Discrete Actions ---\n"
+            for name, details in self.settings.actions["discrete"].items():
+                desc = f" ({details['description']})" if details.get('description') else ""
+                schema += f"- **{name}**{desc}: {details['options']}\n"
+                
+        return schema
 
 
         
