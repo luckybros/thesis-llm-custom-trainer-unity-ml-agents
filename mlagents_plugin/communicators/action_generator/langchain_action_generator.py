@@ -1,6 +1,6 @@
 from typing import Dict, List
 import numpy as np
-from mlagents_plugin.communicators.action_generator.llm_action_generator import LLMActionGenerator
+from mlagents_plugin.communicators.action_generator.llm_action_generator_a import LLMActionGenerator
 from mlagents_plugin.communicators.action_generator.langchain_action_generator_settings import LangchainActionGeneratorSettings
 from dotenv import load_dotenv
 from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
@@ -37,16 +37,6 @@ class LangchainActionGenerator(LLMActionGenerator):
             [Useful information to help decision making] \n {observations} \n\n"
             [Task Information] \n {task} \n\n, 
         """
-
-        
-
-        """
-        self.prompt_template = ChatPromptTemplate.from_messages([
-            ("system", system_msg),
-            ("human", human_msg)
-        ])
-        """
-
         self.model = self.settings.model_constructor_generator()
 
         # Chain dinamica che compone il messaggio a seconda del fatto che sia solo visual, visual + vect o solo vect
@@ -165,7 +155,6 @@ class LangchainActionGenerator(LLMActionGenerator):
         distributions = {}
 
         for idx, agent_values in enumerate(result.values()):
-
             dists_for_agent = [np.zeros(size) for size in self.discrete_branches]
             # one for agent
             discrete_value = agent_values['discrete']

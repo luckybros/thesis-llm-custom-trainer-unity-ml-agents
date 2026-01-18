@@ -1,6 +1,6 @@
 from typing import Dict, List
 import numpy as np
-from mlagents_plugin.communicators.action_generator.llm_action_generator import LLMActionGenerator
+from mlagents_plugin.communicators.action_generator.llm_action_generator_a import LLMActionGenerator
 
 class MockActionGenerator(LLMActionGenerator):
 

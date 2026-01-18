@@ -1,23 +1,26 @@
-from abc import ABC, abstractmethod
+from mlagents_plugin.communicators.action_generator.llm_settings import LLMSettings
+from mlagents_plugin.communicators.action_generator.state_abstration_module import StateAstractionModule
+from mlagents_plugin.communicators.action_generator.prompt_builder import PromptBuilder
+from mlagents_plugin.communicators.action_generator.langchain_model import LangchainModel
+from mlagents_plugin.communicators.action_generator.action_parser import ActionParser
+from mlagents_plugin.communicators.action_generator.distribution_generator import DistributionGenerator
 
-class LLMActionGenerator(ABC):
+class LLMActionGenerator:
+    def __init__(self, setting_path: str, other_settings: dict):
+        self.config = LLMSettings(settings_path=setting_path, other_settings=other_settings)
 
-    def __init__(self, discrete_branches: tuple[int], num_continuous_action: int, num_agents: int):
-        self.discrete_branches = discrete_branches
-        self.num_continuous_action = num_continuous_action
-        self.num_agents = num_agents
-        #self.is_visual = is_visual
+        self.abstraction_module = StateAstractionModule(self.config)
+        self.prompt_builder = PromptBuilder(self.config) # comune a tutti a prescindere dal modello
+        self.model = LangchainModel(self.config)
+        self.action_parser = ActionParser(self.config)
+        self.dist_generator = DistributionGenerator(self.config)
+
+    def get_llm_policy(self, raw_state):
+
+        abstract_state = self.abstraction_module.discretize(raw_state)
+        prompt = self.prompt_builder.build_prompt(abstract_state)
+        model_output = self.model.call_llm(prompt)
+        action_dict = self.action_parser.parse_actions(model_output)
+        distributions = self.dist_generator.generate_distributions(action_dict)
         
-    @abstractmethod
-    def encode_state(self, state):
-        """
-        Function to convert numerical observations to text for LLMs to understand
-        """
-        pass
-
-    @abstractmethod
-    def get_llm_policy(self, text_state, cache):
-        """
-        Function to call LLMs, returns a probability distribution on the action space
-        """ 
-        pass
+        return distributions
