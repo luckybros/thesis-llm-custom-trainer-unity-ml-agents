@@ -23,6 +23,7 @@ class ActionParser:
 
                 if match:
                     choice = match.group(1).strip()
+                    choice = choice.capitalize()
                     result[idx]["continuous"][act_name] = choice
 
             for act_name in self.actions["discrete"].keys():
@@ -31,6 +32,7 @@ class ActionParser:
 
                 if match:
                     choice = match.group(1).strip()
+                    choice = choice.capitalize()
                     result[idx]["discrete"][act_name] = choice
 
         return result

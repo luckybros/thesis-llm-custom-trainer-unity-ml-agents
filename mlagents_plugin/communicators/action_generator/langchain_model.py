@@ -16,8 +16,9 @@ class LangchainModel:
         self.chain = RunnableLambda(self._format_input) | self.model | StrOutputParser()
 
     def call_llm(self, prompt):
+        #print(f'prompt: {prompt}')
         llm_choice = self.chain.invoke(prompt)
-        print(f"llm_choice: {llm_choice}")
+        #print(f"llm_choice: {llm_choice}")
         return llm_choice
     
     def _model_constructor(self, model_name):

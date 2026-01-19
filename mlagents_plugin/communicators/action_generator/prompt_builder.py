@@ -36,7 +36,7 @@ class PromptBuilder:
 
         content = []
 
-        observation_text = state.get("states", "None, only visuals") # dovremmo chiamarlo vectorial poiché questi in realtà sono gli astratti del vettoriale
+        observation_text = state.get("vectorial", "None, only visuals") # dovremmo chiamarlo vectorial poiché questi in realtà sono gli astratti del vettoriale
 
         final_text = self.human_mgs.format(
             history = self.history,
@@ -70,8 +70,6 @@ class PromptBuilder:
 
         return {"sys_msg": self.system_msg, "hum_msg": content}
 
-
-        
 
     def _format_action_schema(self):
         """

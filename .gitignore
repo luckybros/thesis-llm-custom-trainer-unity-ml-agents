@@ -1,5 +1,6 @@
 *.egg-info/
 *.__pycache__/
+*.png
 
 mlagents_plugin/config/logs_immagini/
 

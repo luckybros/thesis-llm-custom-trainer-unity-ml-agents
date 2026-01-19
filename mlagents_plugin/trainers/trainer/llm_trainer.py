@@ -66,7 +66,7 @@ class LLMTrainer(PPOTrainer):
         # RL Trainer, we copy and paste bc if we called super()._process_trajectory it
         # would save all buffer without the LLM's log probs
 
-
+        #logger.info(f"trajectory: {trajectory}")
         self._maybe_write_summary(self.get_step + len(trajectory.steps))
         self._maybe_save_model(self.get_step + len(trajectory.steps))
         self._increment_step(len(trajectory.steps), trajectory.behavior_id)
@@ -170,7 +170,7 @@ class LLMTrainer(PPOTrainer):
         llm_log_probs = self.policy.pop_llm_buffer_data(agent_id=agent_id, num_items=num_steps)
 
         # è vero qui li raggruppo per timestamp ma solo perché sono stati salvati cosi prima
-        logger.info(f"llm_log_probs process_trajectory: {llm_log_probs}")
+        #logger.info(f"llm_log_probs process_trajectory: {llm_log_probs}")
         #if not isinstance(llm_log_probs, dict):
         #    logger.warning(f"Attenzione: llm_log_probs non è un dict ma {type(llm_log_probs)}!")
 
@@ -180,7 +180,10 @@ class LLMTrainer(PPOTrainer):
 
         self._append_to_update_buffer(agent_buffer_trajectory)
 
-        # logger.info(agent_buffer_trajectory)
+        # check per vedere quale elemento non ha gli stessi elementi
+        for key, data in agent_buffer_trajectory.items():
+            logger.info(f"Key: {key}, Length: {len(data)}")
+        #logger.info(f"agent_buffer_trajectory :{agent_buffer_trajectory}")
         # If this was a terminal trajectory, append stats and reset reward collection
         if trajectory.done_reached:
             self._update_end_episode_stats(agent_id, self.optimizer)

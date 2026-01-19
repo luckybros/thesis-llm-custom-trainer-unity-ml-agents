@@ -37,7 +37,7 @@ class LLMSettings:
                     "description": item.get('description', ''),
                     "values": item.get('values', [0.0]*len(item.get('options', [])))
                 }
-                
+
         self.use_vectorial_obs = llm_config.get('use_vectorial_obs', False)
         self.use_visual_obs = llm_config.get('use_visual_obs', False)
         self.batch_size = llm_config.get('batch_size', None)
@@ -45,6 +45,8 @@ class LLMSettings:
         self.num_agents = other_settings['num_agents']
         self.discrete_branches = other_settings['discrete_branches']
         self.num_continuous_actions = other_settings['num_continuous_actions']
+
+        self.features = llm_config.get('features', False)
 
 
     def get_index_of_action(self, action: str, choice: str, continuous: bool) -> int:

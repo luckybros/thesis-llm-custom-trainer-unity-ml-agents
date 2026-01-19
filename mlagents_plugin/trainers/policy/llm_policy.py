@@ -60,11 +60,13 @@ class TorchLLMPolicy(TorchPolicy):
         # LLM part
         obs = decision_requests.obs
 
+        """
         logger.info(f"len obs: {len(decision_requests.obs)}")
         if (len(decision_requests.obs) == 1):
             logger.info("ONLY VECTOR")
         elif (len(decision_requests.obs) >= 1):
             logger.info("VECTOR AND VISUAL")
+        """
                     
         global_agent_ids = [
             get_global_agent_id(worker_id, int(agent_id))
@@ -74,7 +76,7 @@ class TorchLLMPolicy(TorchPolicy):
 
         #logger.info(f"llm_run_out: {llm_run_out}")
         refresh_llm = self._llm_step_counter % self.llm_refresh_interval == 0
-        print(refresh_llm)
+        #print(refresh_llm)
         #logger.info(f"global_agent_ids: {global_agent_ids}")
 
         # The problem is that process trajectory can't have missing piece of information, so we have
@@ -200,8 +202,6 @@ class TorchLLMPolicy(TorchPolicy):
             )
         masks = self._extract_masks(decision_requests)
 
-        logger.info(f"num agents: {num_agents}")
-        logger.info(f"obs: {obs}")
         llm_run_out = self.communicator_client.recieve_action_from_llm(obs) # Dict[str, Any]
         return llm_run_out
         
