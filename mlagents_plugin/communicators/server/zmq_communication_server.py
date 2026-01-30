@@ -52,7 +52,7 @@ class ZMQCommunicatorServer:
 
             return json.dumps(payload)
 
-        # print(f"state: {data}")
+        print(f"state: {data}")
         llm_policy = self.action_generator.get_llm_policy(data)
         return llm_policy
 

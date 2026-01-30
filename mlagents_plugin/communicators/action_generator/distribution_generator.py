@@ -52,7 +52,7 @@ class DistributionGenerator:
         distributions = {}
 
         for idx, agent_values in enumerate(result.values()):
-            dists_for_agent = [np.zeroes(2) for _ in range(self.num_continuous_action)]
+            dists_for_agent = [np.zeros(2) for _ in range(self.num_continuous_action)]
             continuous_value = agent_values['continuous']
 
             for i, (k, v) in enumerate(continuous_value.items()):

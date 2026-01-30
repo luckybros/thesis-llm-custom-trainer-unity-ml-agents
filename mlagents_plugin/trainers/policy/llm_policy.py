@@ -32,8 +32,7 @@ class TorchLLMPolicy(TorchPolicy):
         actor_kwargs: Dict[str, Any],
         communicator_cls: type,
         llm_refresh_interval: int,
-        use_vectorial_obs: bool,
-        use_visual_obs: bool,
+        observation_types: list,
     ):
         
         super().__init__(seed, behavior_spec, network_settings, actor_cls, actor_kwargs)
@@ -51,17 +50,16 @@ class TorchLLMPolicy(TorchPolicy):
         self.agent_llm_buffers: Dict[str, LLMBuffer] = {}
         self.llm_refresh_interval = llm_refresh_interval
         self._llm_step_counter = 0
-        self._use_vectorial_obs = use_vectorial_obs
-        self._use_visual_obs = use_visual_obs
+        self.observation_types = observation_types
     
     def get_action(
             self, decision_requests: DecisionSteps, worker_id : int
     ) -> ActionInfo:
         # LLM part
         obs = decision_requests.obs
-
+        logger.info(f'obs: {obs}')
         """
-        logger.info(f"len obs: {len(decision_requests.obs)}")
+        logger.info(f"len obs: {lebsn(decision_requests.obs)}")
         if (len(decision_requests.obs) == 1):
             logger.info("ONLY VECTOR")
         elif (len(decision_requests.obs) >= 1):
@@ -197,8 +195,7 @@ class TorchLLMPolicy(TorchPolicy):
                 discrete_branches=self.action_spec.discrete_branches, 
                 num_continuous_action=self.num_continuous_action, 
                 num_agents=num_agents, 
-                use_vectorial_obs=self._use_vectorial_obs,
-                use_visual_obs=self._use_visual_obs,
+                observation_types=self.observation_types
             )
         masks = self._extract_masks(decision_requests)
 

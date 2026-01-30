@@ -27,8 +27,7 @@ class LLMSettings(PPOSettings):
     alpha : float = 0.1
     communicator : CommunicatorType = CommunicatorType.RANDOM
     llm_refresh_interval : int = 10
-    use_vectorial_obs: bool = False
-    use_visual_obs: bool = False
+    observation_types : list = []
     
 class TorchLLMOptimizer(TorchPPOOptimizer):
     def __init__(self, policy: TorchLLMPolicy, trainer_settings: TrainerSettings):

@@ -6,14 +6,12 @@ class BaseCommunicationClient(ABC):
             discrete_branches, 
             num_continuous_action, 
             num_agents, 
-            use_vectorial_obs,
-            use_visual_obs
+            observation_types
     ):
         self.discrete_branches = discrete_branches
         self.num_continuous_action = num_continuous_action
         self.num_agents = num_agents
-        self.use_vectorial_obs = use_vectorial_obs
-        self.use_visual_obs = use_visual_obs
+        self.observation_types = observation_types
 
     @abstractmethod
     def recieve_action_from_llm(self, obs):

@@ -54,6 +54,9 @@ class LLMTrainer(PPOTrainer):
         self.hyperparameters: LLMSettings = cast(
             LLMSettings, self.trainer_settings.hyperparameters
         )
+
+        self.observation_types = self.hyperparameters.observation_types
+        logger.info(f"observation_types = {self.observation_types}")
         self.communicator_type = self.hyperparameters.communicator
         self.policy: TorchLLMPolicy = None
 
@@ -225,8 +228,7 @@ class LLMTrainer(PPOTrainer):
             actor_kwargs,
             communicator_cls,
             self.hyperparameters.llm_refresh_interval,
-            self.hyperparameters.use_vectorial_obs,
-            self.hyperparameters.use_visual_obs,
+            self.observation_types
         )
         
         return policy

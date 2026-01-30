@@ -40,6 +40,12 @@ class LLMSettings:
 
         self.use_vectorial_obs = llm_config.get('use_vectorial_obs', False)
         self.use_visual_obs = llm_config.get('use_visual_obs', False)
+        self.use_raycast_obs = llm_config.get('use_raycast_obs', False)
+        self.use_grid_obs = llm_config.get('use_grid_obs', False)
+
+        if self.use_grid_obs:
+            self.grid_color_legend = llm_config.get('grid_color_legend', None)
+
         self.batch_size = llm_config.get('batch_size', None)
         
         self.num_agents = other_settings['num_agents']

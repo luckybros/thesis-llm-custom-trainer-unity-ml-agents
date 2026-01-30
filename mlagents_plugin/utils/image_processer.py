@@ -45,4 +45,61 @@ class ImageProcesser:
         self.step += 1
         result = [ self.process_and_save_img(obs, agent_id=i) for i, obs in enumerate(obs_list) ]
         return result
+    
+    def process_grid_images(self, obs_list, settings):
+        """
+        un tensore a 4 dimensioni per agente 
+        e una lista di dizionari
+            - name: food
+              index: 0
+              color: [133, 188, 107] # green
+            - name: agent
+              index: 1
+              color: [33, 150, 243] # blue
+            - name: wall
+              index: 2
+              color: [100, 100, 100] # gray
+            - name: bad food
+              index: 3
+              color: [190, 58, 39] # red
+            - name: frozen agent
+              index: 4
+              color: [0, 255, 255] # light blue
+        """
+        self.step += 1
+        result = []
+        GRID_LOG_DIR = "logs_grid_images"
+        if not os.path.exists(GRID_LOG_DIR):
+            os.makedirs(GRID_LOG_DIR)
+
+        height = settings['height']
+        width = settings['width']
+        bg_color = [0, 0, 0]
+
+        for agent_id, obs in enumerate(obs_list):
+            
+            rgb_image = np.full((height, width, 3), bg_color, dtype=np.uint8)
+            # singolo agente, n matrici quanti sono i tags
+            for tag_tensor, tag_info in zip(obs, settings['tags']):
+                color = tag_info['color']
+                rgb_image[tag_tensor > 0.5] = color
+
+            # adding agent at the center
+            center_y, center_x = height // 2, width // 2
+            rgb_image[center_y, center_x] = [0, 255, 0]
+
+            img = PIL.Image.fromarray(rgb_image, mode='RGB')
+
+            img = img.resize((256, 256), resample=PIL.Image.NEAREST)
+
+            img_filename = f"agent-{agent_id}_{self.step}_grid.png"
+            img.save(os.path.join(GRID_LOG_DIR, img_filename))
+
+            buffered = io.BytesIO()
+            img.save(buffered, format="PNG")
+
+            result.append(base64.b64encode(buffered.getvalue()).decode('utf-8'))
+
+        return result
+        
 
