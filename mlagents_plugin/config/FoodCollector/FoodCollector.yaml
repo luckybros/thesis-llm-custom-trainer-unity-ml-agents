@@ -1,0 +1,54 @@
+behaviors:
+  GridFoodCollector:
+    trainer_type: llm_trainer
+    hyperparameters:
+      batch_size: 1024
+      buffer_size: 10240
+      learning_rate: 0.0003
+      alpha: 0.005
+      beta: 0.005
+      epsilon: 0.2
+      lambd: 0.95
+      num_epoch: 3
+      learning_rate_schedule: linear
+      communicator: zmq
+      llm_refresh_interval: 100
+      observation_types:
+        - name: GridSensor
+          type: GRID
+          index: 0
+          height: 40
+          width: 40
+          background_color: [0, 0, 0]
+          tags:
+            - name: food
+              index: 0
+              color: [133, 188, 107] # green
+            - name: agent
+              index: 1
+              color: [33, 150, 243] # blue
+            - name: wall
+              index: 2
+              color: [100, 100, 100] # gray
+            - name: bad food
+              index: 3
+              color: [190, 58, 39] # red
+            - name: frozen agent
+              index: 4
+              color: [0, 255, 255] # light blue
+        - name: FrozenAgent
+          type: VECTORIAL
+          index: 1
+    network_settings: 
+      normalize: false
+      hidden_units: 256
+      num_layers: 1
+      vis_encode_type: simple
+    reward_signals:
+      extrinsic:
+        gamma: 0.99
+        strength: 1.0
+    keep_checkpoints: 5
+    max_steps: 2000000
+    time_horizon: 64
+    summary_freq: 10000

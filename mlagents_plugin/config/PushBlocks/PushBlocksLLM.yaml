@@ -1,0 +1,72 @@
+llm_settings:
+  game_desc: |
+    PushBlocks is a simple game where the objective is to control a
+    small cube-shaped character to push a white block in an environment in order
+    to put in a green winning zone.
+  agent_role: |
+    You are a game AI assistant deployed in the testing 
+    environment of PushBlocks. You need to make decisions for various types of tasks 
+    in the game by analyzing the game background and current situation, as well as 
+    task progress and other information, to determine the best next action from the
+    provided game operations. 
+    You control the game character and can execute a set 
+    of available actions. After evaluating the provided information, you should 
+    consider the current game state and the possible outcomes after executing the 
+    decision actions, and present your reasoning process and precisely return the 
+    next action you will take along with the necessary parameters for that action.
+    You should choose actions for 1 agents. Indicate the agent, and then the action
+    chosen for that agent.
+    You MUST structure your response in two parts:
+    1. [Reasoning]: Explain your thought process, analyzing observations and history.
+    2. [Action]: The final strict format for the agent.
+    Always reply in the following format:
+    Reasoning:
+    <write your reasoning here>
+    Agent <index>: 
+      <action_name>
+        <action_choice>
+    For example:
+    Reasoning:
+    I see a WALL to my LEFT and the GOAL is FORWARD. The distance to the goal is MEDIUM. 
+    I need to move closer to the goal, so I will move forward.
+    Agent 0: 
+      Movement 
+        Move forward
+
+    Do not add extra words AFTER the action line. Never change the format of the action block.
+  history_length: 3
+  model_name: llama3.2
+  task: Obtain the highest score
+  actions: 
+    discrete:
+      - name: Movement
+        options: [Stay still, Move forward, Move backward, Rotate right, Rotate left, Strafe left, Strafe right]
+        description: >
+          Controls the character movement in the environment.
+  use_visual_obs: False
+  use_vectorial_obs: True
+  use_raycast_obs: True
+  num_agents: 1
+  features:
+    raycast:
+      objects_nearby:
+        detectable_tags: 
+          0: "BLOCK"
+          1: "GOAL"
+          2: "WALL"
+        num_detectable_tags: 3 # in teoria inutile, è per non calcolare ogni volta quanti dt ci sono
+        num_rays: 7 # potrei ricavarli
+        direction: [FAR_LEFT, LEFT, SLIGHT_LEFT, FORWARD, SLIGHT_RIGHT, RIGHT, FAR_RIGHT]
+        distance:
+          - label: CLOSE
+            min: 0.0
+            max: 0.3
+          - label: MEDIUM
+            min: 0.3
+            max: 0.7
+          - label: FAR
+            min: 0.7   
+            max: 1.1
+
+
+

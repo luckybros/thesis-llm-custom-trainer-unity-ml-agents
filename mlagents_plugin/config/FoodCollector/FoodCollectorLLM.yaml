@@ -1,0 +1,94 @@
+llm_settings:
+  game_desc: |
+    FoodCollector is a simple game where agents compete to collect food
+    he agents must learn to collect as many green food spheres as possible while avoiding red spheres.
+  agent_role: |
+    You are a game AI assistant deployed in the testing 
+    environment of FoodCollector. You need to make decisions for various types of tasks 
+    in the game by analyzing the game background and current situation, as well as 
+    task progress and other information, to determine the best next action from the
+    provided game operations. 
+    You control the game character and can execute a set 
+    of available actions. After evaluating the provided information, you should 
+    consider the current game state and the possible outcomes after executing the 
+    decision actions, and present your reasoning process and precisely return the 
+    next action you will take along with the necessary parameters for that action.
+    You should choose actions for 1 agents. Indicate the agent, and then the action
+    chosen for that agent.
+    You MUST structure your response in two parts:
+    1. [Reasoning]: Explain your thought process, analyzing observations and history.
+    2. [Action]: The final strict format for the agent.
+    Always reply in the following format:
+    Reasoning:
+    <write your reasoning here>
+    Agent <index>: 
+      <action_name>
+        <action_choice>
+    For example:
+    Reasoning:
+    I see a WALL to my LEFT and the food is FORWARD. 
+    I need to move closer to the goal, so I will move forward.
+    Agent 0: 
+      Movement 
+        Move forward
+
+    Do not add extra words AFTER the action line. Never change the format of the action block.
+  history_length: 3
+  model_name: meta-llama/llama-4-scout-17b-16e-instruct
+  task: Obtain the highest score
+  actions: 
+    discrete:
+      - name: Shoot laser
+        options: [Don't shoot, Shoot]
+        description: >
+          Let the character shoot a lasr that can paralize other character.
+    continuous:
+      - name: Move Forward/Backward
+        options: [Backward, Forward]
+        values: [-1.0, 1.0]
+        desctioption: >
+          Controls movement along the longitudinal axis.
+      - name: Move Sideways 
+        options: [Left, Right]
+        range: [-1.0, 1.0]
+        description: >
+          Controls movement along the lateral axis (Strafing). 
+      - name: Rotate
+        options: [Left, Right]
+        range: [-1.0, 1.0]
+        description: >
+          Let the character rotate, and face a different direction.
+  use_visual_obs: False
+  use_vectorial_obs: True
+  use_grid_obs: True
+  num_agents: 1
+  features: 
+    vectorial:
+      is_frozen:
+        type: "BOOL"
+        indices: [0]
+        mapping:
+          0: "IS_NOT_FROZEN"
+          1: "IS_FROZEN"
+      #is_shooting:
+      #  type: 'BOOL'
+      #  indices: [3]
+      #  mapping:
+      #    0: "IS_NOT_SHOOTING"
+      #    1: "IS_SHOOTING"
+  grid_color_legend:
+    - object: "Food"
+      color: "Green"
+      desc: "Collect to gain points"
+    - object: "Agent"
+      color: "Blue"
+      desc: "Your character"
+    - object: "Wall"
+      color: "Gray"
+      desc: "Obstacle"
+    - object: "Bad Food"
+      color: "Red"
+      desc: "Avoid touching"
+    - object: "Frozen agent"
+      color: "Light blue"
+      desc: "An agent hit by a laser"

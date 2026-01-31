@@ -1,0 +1,70 @@
+llm_settings:
+  game_desc: |
+    3DBall is a simple game where the objective is to control a
+    ball in balance on the head of the various characters. 
+    At each iteration, it is possible to move the characters in various direciton,
+    choosing on the vertical and on the horizontal axis. The observation represent
+    the rotation of the character on the horizonal axes, the rotation on the vertical
+    axes, the difference between the character position and the ball position and the
+    velocity of the ball.
+  agent_role: |
+    You are a game AI assistant deployed in the testing 
+    environment of 3DBall. You need to make decisions for various types of tasks 
+    in the game by analyzing the game background and current situation, as well as 
+    task progress and other information, to determine the best next action from the
+    provided game operations. You control the game character and can execute a set 
+    of available actions. After evaluating the provided information, you should 
+    consider the current game state and the possible outcomes after executing the 
+    decision actions, and present your reasoning process and precisely return the 
+    next action you will take along with the necessary parameters for that action.
+    You should choose actions for 2 agents. Indicate the agent, and then the action
+    chosen for that agent.
+    Explain always your reasoning above, but actions must appear at the end and strictly follow the format
+    Always reply with the actions for each agent in the following format, one per line:
+    Agent <index>: 
+      <action_type>
+        <action_name>
+          <action_choice>
+    For example:
+    Agent 0: 
+      continuous:
+        Z Rotation (Steering)
+          Rotate Left
+        X Rotation (Tilt)
+          Stay still
+      discrete:
+        Move
+          Right
+    Agent 1: 
+      continuous:
+        Z Rotation (Steering)
+          Rotate right
+        X Rotation (Tilt)
+          Rotate backward
+      discrete:
+        Move
+          Right
+    Do not add extra words after the action line. Never change the format.
+  history_length: 3
+  model_name: gemini-2.5-flash
+  task: Keep the ball in balance
+  actions: 
+    continuous:
+      - name: Z Rotation (Steering)
+        options: [Rotate left, Stay still, Rotate right]
+        values: [-0.375, 0.0, 0.375]
+        description: >
+          Controls the platform's roll (side-to-side tilt). 
+          'Rotate left' lowers the left side, causing the ball to accelerate to the left. 
+          'Rotate right' lowers the right side, causing the ball to accelerate to the right.
+          Use this to counter horizontal velocity (velocity X).
+      - name: X Rotation (Tilt)
+        options: [Rotate forward, Stay still, Rotate backward]
+        values: [-0.375, 0.0, 0.375]
+        description: >
+          Controls the platform's pitch (front-to-back tilt). 
+          'Rotate forward' lowers the front, causing the ball to roll away from you (positive Z). 
+          'Rotate backward' lowers the back, causing the ball to roll towards you (negative Z).
+          Use this to counter forward/backward velocity (velocity Z).
+  use_visual_obs: False
+  use_vectorial_obs: True

@@ -1,0 +1,49 @@
+llm_settings:
+  game_desc: |
+    GridWorld is a simple game where the objective is to reach a goal, where
+    the agent must navigate the grid to the appropriate goal while avoiding the obstacles.
+  agent_role: |
+    You are a game AI assistant deployed in the testing 
+    environment of GridWorld. You need to make decisions for various types of tasks 
+    in the game by analyzing the game background and current situation, as well as 
+    task progress and other information, to determine the best next action from the
+    provided game operations. You control the game character and can execute a set 
+    of available actions. After evaluating the provided information, you should 
+    consider the current game state and the possible outcomes after executing the 
+    decision actions, and present your reasoning process and precisely return the 
+    next action you will take along with the necessary parameters for that action.
+    You should generate actions for 3 agents. Indicate the agent, and then the action
+    chosen for that agent.
+    Always reply with the actions for each agent in the following format, one per line:
+    Agent <index>: 
+      <action_name>
+        <action_choice>
+    For example:
+    Agent 0: 
+      Movement 
+        Go Left
+    Agent 1: 
+      Movement
+        Go right
+    Do not add extra words after the action line. Never change the format.
+    (You may explain your reasoning above—but actions must appear at the end and strictly follow the format.)
+  history_length: 3
+  model_name: meta-llama/llama-4-scout-17b-16e-instruct
+  task: Obtain the highest score
+  actions: 
+    discrete:
+      - name: Movement
+        options: [Do nothing, Go right, Go left, Go up, Go down]
+        description: >
+          Controls the character movement in the environment.
+  use_visual_obs: True
+  use_vectorial_obs: True
+  num_agents: 3
+  features: 
+    vectorial:
+      current_objective:
+        type: "ONE_HOT"
+        indices: [0, 1]
+        mapping:
+          0: "FIND_GREEN_PLUS"
+          1: "FIND_RED_X"

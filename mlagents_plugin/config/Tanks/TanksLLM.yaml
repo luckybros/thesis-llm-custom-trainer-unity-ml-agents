@@ -1,0 +1,102 @@
+llm_settings:
+  game_desc: |
+    Tanks is a simple game where tanks compete in a battle arena. Yout objective is destory
+    the other player, you can shoot and take power ups.
+  agent_role: |
+    You are a game AI assistant deployed in the testing 
+    environment of Tanks. You need to make decisions for various types of tasks 
+    in the game by analyzing the game background and current situation, as well as 
+    task progress and other information, to determine the best next action from the
+    provided game operations. 
+    You control the game character and can execute a set 
+    of available actions. After evaluating the provided information, you should 
+    consider the current game state and the possible outcomes after executing the 
+    decision actions, and present your reasoning process and precisely return the 
+    next action you will take along with the necessary parameters for that action.
+    You should choose actions for 2 agents. Indicate the agent, and then the action
+    chosen for that agent.
+    You MUST structure your response in two parts:
+    1. [Reasoning]: Explain your thought process, analyzing observations and history.
+    2. [Action]: The final strict format for the agent.
+    Always reply in the following format:
+    Reasoning:
+    <write your reasoning here>
+    Agent <index>: 
+      <action_name>
+        <action_choice>
+    For example:
+    Reasoning:
+    I see the enemy is in quite far from me, so I choose to go FORWARD.
+    Agent 0: 
+      Movement 
+        Move forward
+    Do not add extra words AFTER the action line. Never change the format of the action block.
+  history_length: 3
+  model_name: meta-llama/llama-4-scout-17b-16e-instruct
+  task: Win the match.
+  actions: 
+    discrete:
+      - name: Move
+        options: [Stay, Move forward, Move backward]
+        description: >
+          Move the character forward or backward.
+      - name: Turn
+        options: [Stay, Turn right, Turn left]
+        description: >
+          Turn the direction which the character is facing.
+      - name: Shoot
+        options: [Don't shoot, Shoot]
+        description: >
+          Shoot a projectile in the direction which the character is facing.
+  use_visual_obs: True
+  use_vectorial_obs: True
+  use_grid_obs: True
+  use_raycast_obs: True
+  num_agents: 2
+  features: 
+    vectorial:
+      can_shoot:
+        type: "BOOL"
+        indices: [0]
+        mapping:
+          0: "CAN'T SHOOT"
+          1: "CAN SHOOT"
+    raycast:
+      objects_nearby:
+        detectable_tags:
+          0: "ENEMY"
+          1: "POWER UP" 
+          2: "WALL"
+          3: "OBSTACLE"
+        num_detectable_tags: 4
+        num_rays: 7
+        direction: [FAR_LEFT, LEFT, SLIGHT_LEFT, FORWARD, SLIGHT_RIGHT, RIGHT, FAR_RIGHT]
+        distance:
+          - label: CLOSE
+            min: 0.0
+            max: 0.3
+          - label: MEDIUM
+            min: 0.3
+            max: 0.7
+          - label: FAR
+            min: 0.7   
+            max: 1.1
+      #is_shooting:
+      #  type: 'BOOL'
+      #  indices: [3]
+      #  mapping:
+      #    0: "IS_NOT_SHOOTING"
+      #    1: "IS_SHOOTING"
+  grid_color_legend:
+    - object: "Tank"
+      color: "Red"
+      desc: "The tanks in the map, the player if it is at the center of the image"
+    - object: "Power Up"
+      color: "Light Blue"
+      desc: "Power up the player can take"
+    - object: "Wall"
+      color: "Gray"
+      desc: "Walls of the map"
+    - object: "Obstacle"
+      color: "Purple"
+      desc: "The player can't go past them"

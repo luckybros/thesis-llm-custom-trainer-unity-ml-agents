@@ -1,0 +1,35 @@
+behaviors:
+  GridWorld:
+    trainer_type: llm_trainer
+    hyperparameters:
+      batch_size: 32
+      buffer_size: 256
+      learning_rate: 0.0003
+      alpha: 0.005
+      beta: 0.005
+      epsilon: 0.2
+      lambd: 0.95
+      num_epoch: 3
+      learning_rate_schedule: linear
+      communicator: zmq
+      llm_refresh_interval: 100
+      observation_types:
+        - name: ObjectiveVectorialSensor
+          type: VECTORIAL
+          index: 1
+        - name: VisualSensor
+          type: VISUAL
+          index: 0
+    network_settings:
+      normalize: false
+      hidden_units: 128
+      num_layers: 1
+      vis_encode_type: simple
+    reward_signals:
+      extrinsic:
+        gamma: 0.9
+        strength: 1.0
+    keep_checkpoints: 5
+    max_steps: 500000
+    time_horizon: 5
+    summary_freq: 20000
