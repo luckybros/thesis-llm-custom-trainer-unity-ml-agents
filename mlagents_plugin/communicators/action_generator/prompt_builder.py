@@ -85,7 +85,7 @@ class PromptBuilder:
                 })
 
         result = {"sys_msg": self.system_msg, "hum_msg": content}
-        print(f"prompt: {result}")
+        #print(f"prompt: {result}")
         return result
 
 

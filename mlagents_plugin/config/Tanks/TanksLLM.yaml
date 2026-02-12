@@ -28,8 +28,19 @@ llm_settings:
     Reasoning:
     I see the enemy is in quite far from me, so I choose to go FORWARD.
     Agent 0: 
-      Movement 
+      Move
         Move forward
+      Turn
+        Stay
+      Shoot
+        Don't shoot
+    Agent 1:
+      Move
+        Move forward
+      Turn
+        Stay
+      Shoot
+        Don't shoot
     Do not add extra words AFTER the action line. Never change the format of the action block.
   history_length: 3
   model_name: meta-llama/llama-4-scout-17b-16e-instruct

@@ -56,7 +56,7 @@ class LLMTrainer(PPOTrainer):
         )
 
         self.observation_types = self.hyperparameters.observation_types
-        logger.info(f"observation_types = {self.observation_types}")
+        #logger.info(f"observation_types = {self.observation_types}")
         self.communicator_type = self.hyperparameters.communicator
         self.policy: TorchLLMPolicy = None
 
@@ -184,8 +184,8 @@ class LLMTrainer(PPOTrainer):
         self._append_to_update_buffer(agent_buffer_trajectory)
 
         # check per vedere quale elemento non ha gli stessi elementi
-        for key, data in agent_buffer_trajectory.items():
-            logger.info(f"Key: {key}, Length: {len(data)}")
+        #for key, data in agent_buffer_trajectory.items():
+            #logger.info(f"Key: {key}, Length: {len(data)}")
         #logger.info(f"agent_buffer_trajectory :{agent_buffer_trajectory}")
         # If this was a terminal trajectory, append stats and reset reward collection
         if trajectory.done_reached:

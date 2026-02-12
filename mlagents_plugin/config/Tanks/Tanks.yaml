@@ -27,7 +27,7 @@ behaviors:
     keep_checkpoints: 500
     max_steps: 50000000
     time_horizon: 2000 #1000 #64
-    summary_freq: 10000
+    summary_freq: 1000 # default a 10000
     threaded: true
     checkpoint_interval: 50000
     self_play:

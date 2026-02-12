@@ -57,7 +57,6 @@ class TorchLLMPolicy(TorchPolicy):
     ) -> ActionInfo:
         # LLM part
         obs = decision_requests.obs
-        logger.info(f'obs: {obs}')
         """
         logger.info(f"len obs: {lebsn(decision_requests.obs)}")
         if (len(decision_requests.obs) == 1):
