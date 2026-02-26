@@ -17,3 +17,14 @@ mlagents_trainer_plugin.egg-info/
 !Basic.yaml
 !BasicLLM.yaml
 !BasicLLMProva.yaml
+
+# Ignora le build di Unity (Mac)
+*.app/
+# Ignora le build di Unity (Windows/Linux)
+*.exe
+*.x86_64
+# Ignora i log del bug oracle
+bug_log.csv
+# Ignora i metadati di Python
+*.egg-info/
+__pycache__/
