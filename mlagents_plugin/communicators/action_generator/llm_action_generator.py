@@ -21,6 +21,7 @@ class LLMActionGenerator:
 
         abstract_state = self.abstraction_module.discretize(raw_state)
         prompt = self.prompt_builder.build_prompt(abstract_state)
+        print(f"[PROMPT]: {prompt}")
         model_output = self.model.call_llm(prompt)
         action_dict = self.action_parser.parse_actions(model_output)
         distributions = self.dist_generator.generate_distributions(action_dict)

@@ -13,7 +13,7 @@ llm_settings:
     consider the current game state and the possible outcomes after executing the 
     decision actions, and present your reasoning process and precisely return the 
     next action you will take along with the necessary parameters for that action.
-    You should choose actions for 2 agents. Indicate the agent, and then the action
+    You should choose actions for 1 agent. Indicate the agent, and then the action
     chosen for that agent.
     You MUST structure your response in two parts:
     1. [Reasoning]: Explain your thought process, analyzing observations and history.
@@ -28,13 +28,6 @@ llm_settings:
     Reasoning:
     I see the enemy is in quite far from me, so I choose to go FORWARD.
     Agent 0: 
-      Move
-        Move forward
-      Turn
-        Stay
-      Shoot
-        Don't shoot
-    Agent 1:
       Move
         Move forward
       Turn
@@ -63,7 +56,7 @@ llm_settings:
   use_vectorial_obs: True
   use_grid_obs: False
   use_raycast_obs: True
-  num_agents: 2
+  num_agents: 1
   features: 
     vectorial:
       can_shoot:
@@ -77,17 +70,17 @@ llm_settings:
         indices: [1]
         mapping:
           - label: "CRITICAL"
-            min: 0.1
-            max: 25.0
+            min: 0.0
+            max: 0.25
           - label: "LOW"
-            min: 25.1
-            max: 50.0
+            min: 0.251
+            max: 0.50
           - label: "MEDIUM"
-            min: 50.1
-            max: 80.0
+            min: 0.51
+            max: 0.80
           - label: "HEALTHY"
-            min: 80.1
-            max: 100.0
+            min: 0.81
+            max: 1.1
       power_up:
         type: "ONE_HOT"
         indices: [2, 3, 4, 5, 6, 7, 8]
@@ -100,15 +93,19 @@ llm_settings:
           5: "Invincibility"
           6: "Damage Multiplier"
     raycast:
-      objects_nearby:
+      RAYCAST_FRONT:
         detectable_tags:
-          0: "ENEMY"
+          0: "TANK"
           1: "POWER UP" 
-          2: "WALL"
-          3: "OBSTACLE"
-        num_detectable_tags: 4
-        num_rays: 7
-        direction: [FAR_LEFT, LEFT, SLIGHT_LEFT, FORWARD, SLIGHT_RIGHT, RIGHT, FAR_RIGHT]
+          2: "OBSTACLE"
+        num_detectable_tags: 3
+        num_rays: 21
+        # direzioni logiche
+        direction: [
+          FAR_LEFT, LEFT, SLIGHT_LEFT, 
+          FORWARD, 
+          SLIGHT_RIGHT, RIGHT, FAR_RIGHT
+        ] # 7 direzioni logiche
         distance:
           - label: CLOSE
             min: 0.0
@@ -119,22 +116,46 @@ llm_settings:
           - label: FAR
             min: 0.7   
             max: 1.1
+      RAYCAST_BACK:
+        detectable_tags:
+          0: "TANK"
+          1: "POWER UP" 
+          2: "OBSTACLE"
+        num_detectable_tags: 3
+        num_rays: 9
+          # direzioni logiche
+        direction: [
+          LEFT, CENTER, RIGHT
+        ]
+        distance:
+          - label: IMMEDIATE
+            min: 0.0
+            max: 0.2
+          - label: CLOSE
+            min: 0.2
+            max: 0.5
+          - label: MEDIUM
+            min: 0.5
+            max: 0.8
+          - label: FAR
+            min: 0.8   
+            max: 1.1
       #is_shooting:
       #  type: 'BOOL'
       #  indices: [3]
       #  mapping:
       #    0: "IS_NOT_SHOOTING"
       #    1: "IS_SHOOTING"
-  grid_color_legend:
-    - object: "Tank"
-      color: "Red"
-      desc: "The tanks in the map, the player if it is at the center of the image"
-    - object: "Power Up"
-      color: "Light Blue"
-      desc: "Power up the player can take"
-    - object: "Wall"
-      color: "Gray"
-      desc: "Walls of the map"
-    - object: "Obstacle"
-      color: "Purple"
-      desc: "The player can't go past them"
+  #grid_color_legend:
+  #  - object: "Tank"
+  #    color: "Red"
+  #    desc: "The tanks in the map, the player if it is at the center of the image"
+  #  - object: "Power Up"
+  #    color: "Light Blue"
+  #    desc: "Power up the player can take"
+  #  - object: "Wall"
+  #    color: "Gray"
+  #    desc: "Walls of the map"
+  #  - object: "Obstacle"
+  #    color: "Purple"
+  #    desc: "The player can't go past them"

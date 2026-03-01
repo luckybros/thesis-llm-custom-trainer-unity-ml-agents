@@ -51,10 +51,21 @@ class TorchLLMPolicy(TorchPolicy):
         self.llm_refresh_interval = llm_refresh_interval
         self._llm_step_counter = 0
         self.observation_types = observation_types
-    
+        self._is_ghost_frozen: bool = False
+
+    def set_ghost_frozen(self, frozen: bool) -> None:
+        """
+        Imposta la policy in modalità ghost (freezata) o learning (attiva).
+        Quando frozen=True, get_action salta la chiamata all'LLM e usa solo la rete neurale.
+        """
+        self._is_ghost_frozen = frozen
+
     def get_action(
             self, decision_requests: DecisionSteps, worker_id : int
     ) -> ActionInfo:
+        if self._is_ghost_frozen:
+            #logger.info(f"{[get_global_agent_id(worker_id, int(agent_id)) for agent_id in decision_requests.agent_id]}: {self._is_ghost_frozen}")
+            return super().get_action(decision_requests, worker_id)
         # LLM part
         obs = decision_requests.obs
         """

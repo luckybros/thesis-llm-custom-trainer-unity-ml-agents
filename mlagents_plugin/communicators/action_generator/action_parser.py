@@ -11,7 +11,7 @@ class ActionParser:
         matches = re.findall(r'Agent\s+(\d+):(.*?)(?=Agent\s+\d+:|$)', text, re.DOTALL)
         if len(matches) > self.num_agents:
             matches = matches[self.num_agents:]
-        print(f"Matches: {matches}")
+        #print(f"Matches: {matches}")
 
         for idx_str, acts_str in matches:
             idx = int(idx_str)

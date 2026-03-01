@@ -12,11 +12,13 @@ class StateAstractionModule:
             'BOOL': self._process_boolean
         }
 
+        """
         if "raycast" in self.features:
             self.num_detectable_tags = self.features['raycast']['objects_nearby']['num_detectable_tags']
             self.RAYCAST_OBS_OFFSET = self.num_detectable_tags + 2
             self.RAYCAST_OBS_CHECK_IDX = self.num_detectable_tags
             self.RAYCAST_OBS_DIST_IDX = self.num_detectable_tags + 1
+        """
         #with open(settings_path, 'r') as f:
         #    config = yaml.safe_load(f)
 
@@ -99,11 +101,81 @@ class StateAstractionModule:
     
     def discretize_raycast(self, raw_state):
 
-        raw_state_raycast = raw_state['RAYCAST'] # PER ORA SOLO UNO
+        #raw_state_raycast = raw_state['RAYCAST'] # PER ORA SOLO UNO
+        raycast_keys = [k for k in raw_state.keys() if k.startswith('RAYCAST')]
 
+        # ciclo su tutti i nomi dei raycast
+        for sensor_name in raycast_keys:
+            sensor_dict = raw_state[sensor_name] # ottengo {'agent_0': [1, 2, 3], 'agent_1': [4, 5, 6]}
+
+            #print(f"SENSOR NAME: {sensor_name}")
+            feature_options = self.features['raycast'][sensor_name]
+            #print(f"FEATURE OPTIONS: {feature_options}")
+            num_tags = feature_options['num_detectable_tags']
+            #print(f"NUM TAGS: {num_tags}")
+
+            offset = num_tags + 2
+            check_idx = num_tags
+            dist_idx = num_tags + 1
+
+            logical_directions = feature_options['direction']
+            #print(f"logical_directions {logical_directions}")
+            num_logical_dirs = len(logical_directions)
+            total_rays = feature_options['num_rays']
+
+            rays_per_bucket = total_rays // num_logical_dirs
+
+            # per ogni osservazione di ogni agente
+            for agent_id, ray_vect in sensor_dict.items():
+
+                abstract_state_list = []
+
+                for l_idx in range(num_logical_dirs):
+
+                    logical_direction = logical_directions[l_idx]
+                    #print(f"local direction in for: {logical_direction}")
+                    # temporary list for object in this bucket
+                    objects_in_direction = []
+
+                    #print(f"ray vect: {ray_vect}")
+                    # deve navigare #rays_per_bucket raggi per direzione per vedere se c'è qualcosa e aggiungerla alla lista
+                    for r_in_b in range(rays_per_bucket):
+                        ray_idx = (l_idx * rays_per_bucket) + r_in_b
+                        start_idx = ray_idx * offset
+
+                        ray_subvect = ray_vect[start_idx : start_idx + offset]
+
+                    #    print(f"ray_subvect: {ray_subvect}")
+                        # it didnt hit anything
+                        if ray_subvect[check_idx] == 1:
+                            continue
+
+                        det_obj_ray_subv = ray_subvect[0 : num_tags]
+                        det_obj = self._process_one_hot(det_obj_ray_subv, feature_options['detectable_tags'])
+                        distance = ray_subvect[dist_idx]
+                        buck_distance = self._process_bucket(distance, feature_options['distance'])
+
+                        detected_item = {
+                            'object': det_obj, 
+                            'distance': buck_distance
+                        }
+
+                        if detected_item not in objects_in_direction:
+                            objects_in_direction.append(detected_item)
+
+                    if objects_in_direction:
+                        abstract_state_list.append({
+                            'direction': logical_direction,
+                            'objects_detected': objects_in_direction
+                        })
+                raw_state[sensor_name][agent_id] = abstract_state_list
+
+        return raw_state
+
+        """
         for agent_id, ray_vect in raw_state_raycast.items():
             # itero sugli agenti
-            """
+        
             {'agent_0': 
                 [0.0, 1.0, 0.0, 0.0, 0.5465336441993713, 
                  0.0, 1.0, 0.0, 0.0, 0.6310825943946838, 
@@ -113,7 +185,7 @@ class StateAstractionModule:
                  0.0, 0.0, 1.0, 0.0, 0.5810348391532898, 
                  0.0, 0.0, 0.0, 1.0, 1.0]}
             }
-            """
+        
 
             # itero ogni 5 valori
             abstract_state_dict = {}
@@ -142,6 +214,7 @@ class StateAstractionModule:
             raw_state['RAYCAST'][agent_id] = abstract_state_dict
 
         return raw_state
+        """
 
 
     def _process_one_hot(self, values: list, mapping: dict):

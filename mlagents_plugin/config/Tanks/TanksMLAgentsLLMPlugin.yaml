@@ -14,34 +14,37 @@ behaviors:
       communicator: zmq
       llm_refresh_interval: 100
       observation_types:
-        - name: CameraSensor
-          type: VISUAL
-          index: 0
-        - name: GridSensor
-          type: GRID
-          index: 1
-          height: 30
-          width: 30
-          background_color: [0, 0, 0]
-          tags:
-            - name: Tank
-              index: 0
-              color: [220, 20, 60] # red
-            - name: PowerUp
-              index: 1
-              color: [0, 255, 255] # light blue
-            - name: Wall
-              index: 2
-              color: [128, 128, 128] # gray
-            - name: Tank
-              index: 3
-              color: [148, 0, 211] # purple
-        - name: RayPerceptionSensor
+        #- name: CameraSensor
+        #  type: VISUAL
+        #  index: 0
+        #- name: GridSensor
+        #  type: GRID
+        #  index: 1
+        #  height: 30
+        #  width: 30
+        #  background_color: [0, 0, 0]
+        #  tags:
+        #    - name: Tank
+        #      index: 0
+        #      color: [220, 20, 60] # red
+        #    - name: PowerUp
+        #      index: 1
+        #      color: [0, 255, 255] # light blue
+        #    - name: Wall
+        #      index: 2
+        #      color: [128, 128, 128] # gray
+        #    - name: Tank
+        #      index: 3
+        #      color: [148, 0, 211] # purple
+        - name: RAYCAST_FRONT
           type: RAYCAST
-          index: 2
-        - name: VectorSensor
+          index: 0
+        - name: RAYCAST_BACK
+          type: RAYCAST
+          index: 1
+        - name: VECTORIAL
           type: VECTORIAL
-          index: 3
+          index: 2
     network_settings:
       normalize: false
       hidden_units: 512
@@ -59,8 +62,8 @@ behaviors:
     keep_checkpoints: 500
     max_steps: 50000000
     time_horizon: 2000 #1000 #64
-    summary_freq: 10000
-    threaded: true
+    summary_freq: 1000
+    threaded: false
     checkpoint_interval: 50000
     self_play:
       save_steps: 50000

@@ -37,6 +37,6 @@ behaviors:
       window: 10
       play_against_latest_model_ratio: 0.5
       initial_elo: 1200.0
-env_settings:
-  max_lifetime_restarts: 0
-  # timeout_wait: 0
+#env_settings:
+#  max_lifetime_restarts: 0
+#  timeout_wait: 0

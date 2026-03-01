@@ -28,7 +28,7 @@ class OracleSideChannel(SideChannel):
 
         self.worker = threading.Thread(target=self._on_update, daemon=True)
         self.last_heartbeat_time = time.time()
-        self.timeout_seconds = 10
+        self.timeout_seconds = 100
         self.history = []
         self.history_length = 100
         self.crash_detected = False
