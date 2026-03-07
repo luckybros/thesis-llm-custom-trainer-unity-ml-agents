@@ -47,15 +47,10 @@ class ZMQCommunicatorClient(BaseCommunicationClient):
                 data = {f"agent_{i}": img_str for i, img_str in enumerate(data)}
             elif observation_type['type'] == 'RAYCAST':
                 # qui il check e lo slice andrebbe fatto se i raycast sono stuckati
-                print(f"sono in raycast")
-                print(f"data pre slice: {len(data[0])}")
-                print(f"data type: {type(data)}")
-                print(f"data: {data}")
                 if (observation_type['name'] == 'RAYCAST_FRONT'):
                     data = data[:, -21*5:]
                 else:
                     data = data[:, -9*5:]
-                print(f"data post slice: {len(data[0])}")
                 data = {f"agent_{i}": state.tolist() for i, state in enumerate(data)}
             else: 
                 data = {f"agent_{i}": state.tolist() for i, state in enumerate(data)}
@@ -79,7 +74,7 @@ class ZMQCommunicatorClient(BaseCommunicationClient):
             payload["vectorial"] = {f"agent_{i}": state.tolist() for i, state in enumerate(obs)}
         """
         
-        #print(f"Obs in client: {payload}")
+        print(f"Obs in client: {payload}")
         self.socket.send_json(payload)
         data = self.socket.recv_json()
         return data

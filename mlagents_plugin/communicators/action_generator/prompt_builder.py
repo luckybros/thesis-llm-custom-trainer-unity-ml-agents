@@ -51,9 +51,13 @@ class PromptBuilder:
             content_text += "\n"
         
         if self.use_raycast:
-            raycast_text = state.get("RAYCAST", "None")
-            content_text += str(raycast_text)
-            content_text += "\n"
+            raycast_parts = []
+            for key, value in state.items():
+                if key.startswith("RAYCAST"):
+                    raycast_parts.append(f"{key}: {value}")
+            if raycast_parts:
+                content_text += "\n".join(raycast_parts)
+                content_text += "\n"
 
         final_text = self.human_mgs.format(
             history = self.history,

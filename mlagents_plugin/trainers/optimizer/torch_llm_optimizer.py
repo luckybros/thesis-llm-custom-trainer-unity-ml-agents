@@ -125,8 +125,6 @@ class TorchLLMOptimizer(TorchPPOOptimizer):
                 llm_discrete_log_probs = LLMUtils.tensor3d_to_list_of_2d(llm_discrete_log_probs)
                 has_llm_data = True
             
-
-        
         if LLMBufferKey.LLM_LOG_CONTINUOUS_LOG_PROBS in batch:
             #logger.info(f"llm_continuous_log_probs pre : {llm_continuous_log_probs}")
             clean_batch = LLMUtils.clean_ndarray_list(batch[LLMBufferKey.LLM_LOG_CONTINUOUS_LOG_PROBS])

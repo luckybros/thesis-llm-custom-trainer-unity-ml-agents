@@ -11,7 +11,6 @@ class StateAstractionModule:
             'BUCKET': self._process_bucket,
             'BOOL': self._process_boolean
         }
-
         """
         if "raycast" in self.features:
             self.num_detectable_tags = self.features['raycast']['objects_nearby']['num_detectable_tags']

@@ -31,37 +31,46 @@ class OracleSideChannel(SideChannel):
         self.timeout_seconds = 100
         self.history = []
         self.history_length = 100
-        self.crash_detected = False
-        self.error_message = ""
+        self.bug_detected = False
         self.csv_path = "bug_log.csv"
+
         if not os.path.exists(self.csv_path):
             with open(self.csv_path, "w", newline="") as f:
                 writer = csv.writer(f)
-                writer.writerow(["timestamp", "type", "message"])
-        atexit.register(self._on_python_exit)
+                writer.writerow(["timestamp", "oracle", "bug_type", "message"])
+        # atexit.register(self._on_python_exit)
 
     def on_message_received(self, msg: IncomingMessage) -> None:
         """
         Note: we must implement this method of the SideChannel interface to recieve messages from Unity
         """
         message_content = msg.read_string()
-        #print(message_content)
-        #print(f"self.crash_detected: {self.crash_detected}")
-        if message_content.startswith('ERROR'):
-            self.crash_detected = True
-            self.error_message = message_content
-            print(f"[CRASH ORACLE]: ERROR! There was un unexpected error")
-            print(f"[CRASH ORACLE]: Detected possible crash")
-            print(f"[CRASH ORACLE]: {self.error_message}")
-            self._log_to_csv("crash", self.error_message)
-        if message_content == "START":
+        # --- BUG REPORT--- (format: [GAME_BUG]{ORACLE_NAME}|{BUG_TYPE}|{MESSAGE})
+        if message_content.startswith('[GAME_BUG]'):
+            parts = message_content.split('|')
+            
+            oracle_name = parts[1]
+            bug_type = parts[2]
+            bug_message = parts[3]
+
+            print(f"[{oracle_name}] Bug detected")
+            print(f"[{oracle_name}] Type: {bug_type}")
+            print(f"[{oracle_name}] {bug_message}")
+
+            self._log_to_csv(oracle_name, bug_type, bug_message)
+        
+        # --- START: Unity is ready ---
+        elif message_content == "[START]":
             self.worker.start()
-        elif message_content.startswith('ALIVE'):
+
+        # --- ALIVE: heartbeat from HangOracle ---
+        elif message_content.startswith('[ALIVE]'):
             self.last_heartbeat_time = time.time()
             message_split = message_content.split(' ')
-            self.update_history(message_split[1])
+            if (len(message_split) > 1):
+                self.update_history(message_split[1])
 
-    def _log_to_csv(self, bug_type: str, message: str):
+    def _log_to_csv(self, oracle: str, bug_type: str, message: str):
         """Append una riga al CSV"""
         timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         # Pulisci il messaggio: togli newline per non rompere il CSV
@@ -69,7 +78,7 @@ class OracleSideChannel(SideChannel):
         with open(self.csv_path, "a", newline="") as f:
             writer = csv.writer(f)
             writer.writerow([timestamp, bug_type, clean_msg])
-        print(f"[ORACLE] Bug salvato in {self.csv_path}: [{bug_type}]")
+        print(f"[ORACLE] Bug salvato in {self.csv_path}: [{oracle}][{bug_type}]")
 
     def update_history(self, num: int) -> None:
         self.history.append(num)
@@ -82,30 +91,28 @@ class OracleSideChannel(SideChannel):
         super().queue_message_to_send(msg)
 
     def _on_update(self) -> None:
+        """Thread that monitors hearbeat for hang detection"""
         self.last_heartbeat_time = time.time()
-        print(f"[CRASH ORACLE] Starting...")
+        print(f"[HANG ORACLE] Monitoring started...")
         while True:
-            # crash oracle
-                #os._exit(1)
-
             # Hang oracle
             if time.time() - self.last_heartbeat_time > self.timeout_seconds:
                 print(f"[HANG ORACLE] ERROR! Unity does not respond")
                 print(f"[HANG ORACLE] Detected possible hang")
                 print(f"[HANG ORACLE] History: {self.history} ")
-                self._log_to_csv("hang", "Not recieved ping for 10 seconds")
+                self._log_to_csv("HANG ORACLE", "hang", "Not recieved ping for timeout seconds")
 
                 # qui decidiamo cosa fare
                 # scrivere su un file di log
                 # inviare una mail
                 # uccidere il processo Python (perché ormai è bloccato)
                 # riprendere il processo
-                self.crash_detected = True
-                self._kill_unity_process()
+                #self._kill_unity_process()
                 break
 
             time.sleep(0.01)
 
+    """
     def _on_python_exit(self):
         # if mlagents closes but it's not hanging, so an unexpected crash without error
         print(f"self.crash_detected: {self.crash_detected}")
@@ -114,9 +121,10 @@ class OracleSideChannel(SideChannel):
             print(f"[CRASH ORACLE]: Detected possible crash")
             print(f"[CRASH ORACLE]: No error message detected")
             self._log_to_csv("crash", "Unexpected crash: no error message from Unity")
+    """
 
     def _kill_unity_process(self):
-        """Trova il processo di Unity collegato e lo abbatte"""
+        """Find the Unity child process and kill it """
         try:
             # Otteniamo il PID del processo padre (mlagents-learn)
             # e cerchiamo i processi figli (l'eseguibile di Unity)
