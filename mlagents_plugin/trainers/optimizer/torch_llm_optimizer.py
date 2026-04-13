@@ -103,7 +103,6 @@ class TorchLLMOptimizer(TorchPPOOptimizer):
 
         # Net output
         #logger.info(f"continuous_parameters: {continuous_log_probs}")
-
         values, _ = self.critic.critic_pass(
             current_obs,
             memories=value_memories,
@@ -119,10 +118,13 @@ class TorchLLMOptimizer(TorchPPOOptimizer):
         # Just discovered that we could get the batch directly, without let it be
         # a tensor again, so this i kinda useless
         if LLMBufferKey.LLM_LOG_DISCRETE_LOG_PROBS in batch:
-            clean_batch = LLMUtils.clean_ndarray_list(batch[LLMBufferKey.LLM_LOG_DISCRETE_LOG_PROBS])
+            mask = batch[LLMBufferKey.LLM_MASK_DISCRETE]
+            raw_data = batch[LLMBufferKey.LLM_LOG_DISCRETE_LOG_PROBS]
+            clean_batch = [d for m, d in zip(mask, raw_data) if m == 1]
+            #clean_batch = LLMUtils.clean_ndarray_list(batch[LLMBufferKey.LLM_LOG_DISCRETE_LOG_PROBS])
             if clean_batch:
-                llm_discrete_log_probs = ModelUtils.list_to_tensor(clean_batch)
-                llm_discrete_log_probs = LLMUtils.tensor3d_to_list_of_2d(llm_discrete_log_probs)
+                llm_discrete_log_probs = LLMUtils.transpose_llm_probs_to_mlagents_format(clean_batch)
+                #llm_discrete_log_probs = LLMUtils.tensor3d_to_list_of_2d(llm_discrete_log_probs)
                 has_llm_data = True
             
         if LLMBufferKey.LLM_LOG_CONTINUOUS_LOG_PROBS in batch:
@@ -137,7 +139,6 @@ class TorchLLMOptimizer(TorchPPOOptimizer):
             
         # At this point, llm_discrete_log_probs is a 3D tensor with this dimentions: [timestamp][action_type][action_dist]
         # We should it became a list of 2d tensor on the actions.
-        #logger.info(f"llm_discrete_log_probs pre: {llm_discrete_log_probs}")
         #logger.info(f"llm_discrete_log_probs pre: {llm_discrete_log_probs}")
 
         old_log_probs = ActionLogProbs.from_buffer(batch)
@@ -166,6 +167,7 @@ class TorchLLMOptimizer(TorchPPOOptimizer):
 
         if discrete_log_probs:
             if LLMBufferKey.LLM_MASK_DISCRETE in batch:
+                logger.info(f"Applying discrete mask")
                 mask_batch = batch[LLMBufferKey.LLM_MASK_DISCRETE]
                 discrete_log_probs = LLMUtils.filter_log_probs(discrete_log_probs, mask_batch)
 
@@ -182,12 +184,12 @@ class TorchLLMOptimizer(TorchPPOOptimizer):
         #logger.info(f"log_probs in Optimizer: {log_probs}")
         #logger.info(f"llm_discrete_log_probs in Optimizer: {llm_discrete_log_probs}")
         #assert log_probs[0].shape == llm_discrete_log_probs[0].shape
-        llm_loss = 0.0
+        llm_loss = torch.tensor(0.0, device=policy_loss.device)
 
         if has_llm_data:
             llm_loss = LLMUtils.calculate_kl_distance(discrete_log_probs, llm_discrete_log_probs, continuous_log_probs, llm_continuous_log_probs)
 
-        #logger.info(f"LLM Loss: {llm_loss}")
+        logger.info(f"LLM Loss: {llm_loss}")
         loss = (
             policy_loss
             + 0.5 * value_loss
@@ -209,9 +211,10 @@ class TorchLLMOptimizer(TorchPPOOptimizer):
             # TODO: After PyTorch is default, change to something more correct.
             "Losses/Policy Loss": torch.abs(policy_loss).item(),
             "Losses/Value Loss": value_loss.item(),
+            "Losses/LLM Loss": llm_loss.item(),
             "Policy/Learning Rate": decay_lr,
             "Policy/Epsilon": decay_eps,
-            "Policy/Beta": decay_bet,
+            "Policy/Beta": decay_bet
         }
 
         return update_stats

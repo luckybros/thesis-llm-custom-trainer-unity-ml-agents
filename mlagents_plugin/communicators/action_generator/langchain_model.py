@@ -16,11 +16,33 @@ class LangchainModel:
         self.model = self._model_constructor(self.model_name)
         self.chain = RunnableLambda(self._format_input) | self.model | StrOutputParser()
 
+        self.fallback_model = ChatOllama(model="qwen2.5:1.5b", temperature=0)
+        self.fallback_chain = RunnableLambda(self._format_input) | self.fallback_model | StrOutputParser()
+
     def call_llm(self, prompt):
+        try:
         #print(f'prompt: {prompt}')
-        llm_choice = self.chain.invoke(prompt)
+            llm_choice = self.chain.invoke(prompt)
         #print(f"llm_choice: {llm_choice}")
-        return llm_choice
+            return llm_choice
+        
+        except Exception as e:
+            print(f"Error calling LLM: {e}")
+            error_msg = str(e).lower()
+
+            fallback_triggers = [
+                "400", "401", "403", "404", "413", "422", "424", 
+                "429", "498", "499", "500", "502", "503", 
+                "rate limit", "too many tokens", "quota", "invalid_request_error",
+                "connection", "timeout" 
+            ]
+            if any(trigger in error_msg for trigger in fallback_triggers):
+                try:
+                    return self.fallback_chain.invoke(prompt)
+                except Exception as fallback_e:
+                    return "Agent 0:\n  Move\n    Stay\n  Turn\n    Stay\n  Shoot\n    Don't shoot"
+                
+            return "Agent 0:\n  Move\n    Stay\n  Turn\n    Stay\n  Shoot\n    Don't shoot"
     
     def _model_constructor(self, model_name):
         if model_name == "gemini-2.5-flash":

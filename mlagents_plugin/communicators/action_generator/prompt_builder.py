@@ -1,11 +1,16 @@
+import os
+import numpy as np
 
 class PromptBuilder:
     def __init__(self, settings):
         
+        self.game_overview = settings.game_desc
+        self.agent_role = settings.agent_role
         self.task = settings.task
         self.actions = settings.actions
-        self.history = []   # devo vedere come salvare l'azione presa dal modello nella storia, per ora lista vuota
-    
+        self.history = []
+
+        
         self.use_vectorial = settings.use_vectorial_obs
         self.use_visual = settings.use_visual_obs
         self.use_raycast = settings.use_raycast_obs
@@ -13,113 +18,97 @@ class PromptBuilder:
         if self.use_grid:
             self.grid_color_legend = settings.grid_color_legend
 
-        self.system_msg = f"""
-            [Game Overview] \n {settings.game_desc}, \n\n
-            [Role and function] \n {settings.agent_role} \n\n
-            [Action Set] \n {self._format_action_schema()}, \n\n
-            [Task Information] \n {self.task} \n\n
-        """
-
-        # lo faccio una sola volta poiché la leggenda di colori è sempre la stessa
-        if self.use_grid:
-            self.system_msg += f"[Color legend for grid images] \n {self._format_grid_color_schema()} \n\n"
-
-        # action set ora è fisso ma potrebbe cambaire con l'ottimizzatore
-        # stessa cosa per il task
-        self.human_mgs = """
-            [History] \n {history}, \n\n
-            [Useful information to help decision making] \n {observations}, \n\n
-        """
-
-    def build_prompt(self, state: dict):
-        """
-        Format the input data for the LLM.
-
-        Args:
-            data (dict): The input data containing the keys "states", "images", etc.
-
-        Returns:
-            list: A list of SystemMessage and HumanMessage formatted for the LLM.
-        """
-
-        content = []
-        content_text = ""
-
-        if self.use_vectorial: 
-            observation_text = state.get("VECTORIAL", "None") # dovremmo chiamarlo vectorial poiché questi in realtà sono gli astratti del vettoriale
-            content_text += str(observation_text)
-            content_text += "\n"
         
-        if self.use_raycast:
-            raycast_parts = []
-            for key, value in state.items():
-                if key.startswith("RAYCAST"):
-                    raycast_parts.append(f"{key}: {value}")
-            if raycast_parts:
-                content_text += "\n".join(raycast_parts)
-                content_text += "\n"
+        self._initialize_system_message()
 
-        final_text = self.human_mgs.format(
-            history = self.history,
-            observations = content_text
+    def _initialize_system_message(self):    
+        abbreviation_legend = (
+            "## DATA ABBREVIATIONS (Mandatory for efficiency)\n"
+            "- RF / RB: Raycast Front / Raycast Back\n"
+            "- Directions: L (Left), SL (Slight Left), F (Forward), SR (Slight Right), R (Right), FR (Far Right), C (Center)\n"
+            "- Objects: OBS (Obstacle), TANK (Enemy), PWUP (PowerUp)\n"
+            "- Distances: I (Immediate), C (Close), M (Medium), F (Far)\n"
         )
 
-        # prompt per ora rispettando logica langchain, poi vediamo per il locale
-        content.append({
-            "type": "text",
-            "text": final_text
-        })
+        self.system_msg = (
+            f"### [GAME OVERVIEW]\n{self.game_overview}\n\n"
+            f"### [ROLE & TASK]\n{self.agent_role}\nTask: {self.task}\n\n"
+            f"{abbreviation_legend}\n"
+            f"### [ACTION SET]\n{self._format_action_schema()}\n\n"
+        )
 
-        # images
-        if self.use_visual:
-            images = state.get("VISUAL", {})
-            for agent_id, img_b64 in images.items():
-                content.append({
-                    "type": "image_url",
-                    "image_url": {"url": f"data:image/png;base64,{img_b64}"}
-                })
-
-        # grid
         if self.use_grid:
-            images = state.get("GRID", {})
-            for agent_id, img_b64 in images.items():
-                content.append({
-                    "type": "image_url",
-                    "image_url": {"url": f"data:image/png;base64,{img_b64}"}
-                })
+            self.system_msg += f"\n### [GRID LEGEND]\n{self._format_grid_color_schema()}"
 
-        result = {"sys_msg": self.system_msg, "hum_msg": content}
-        #print(f"prompt: {result}")
-        return result
+    def _compress_raycast(self, raycast_data):
+        """Trasforma il JSON pesante in una stringa tecnica ultra-densa."""
+        d_map = {'IMMEDIATE': 'I', 'CLOSE': 'C', 'MEDIUM': 'M', 'FAR': 'F'}
+        o_map = {'OBSTACLE': 'OBS', 'TANK': 'TANK', 'POWER UP': 'PWUP'}
+        dir_map = {'LEFT': 'L', 'SLIGHT_LEFT': 'SL', 'FORWARD': 'F', 
+                   'SLIGHT_RIGHT': 'SR', 'RIGHT': 'R', 'FAR_RIGHT': 'FR', 'CENTER': 'C'}
 
+        if not isinstance(raycast_data, list): return str(raycast_data)
+
+        compressed_parts = []
+        for entry in raycast_data:
+            direction = dir_map.get(entry['direction'], entry['direction'])
+            
+            objs = []
+            for o in entry.get('objects_detected', []):
+                obj_name = o_map.get(o['object'], o['object'])
+                dist = d_map.get(o['distance'], o['distance'])
+                objs.append(f"{obj_name}:{dist}")
+            
+            if objs:
+                compressed_parts.append(f"{direction}:({','.join(objs)})")
+        
+        return " | ".join(compressed_parts)
+
+    def build_prompt(self, state: dict):
+        
+        content_text = ""
+        if self.use_vectorial:
+            vec_obs = state.get("VECTORIAL", {})
+            for agent_id, data in vec_obs.items():
+                # Rimuoviamo le graffe del dizionario per risparmiare token
+                clean_data = str(data).replace("{", "").replace("}", "").replace("'", "")
+                content_text += f"[STATUS {agent_id}] {clean_data}\n"
+
+        if self.use_raycast:
+            for key, agents_dict in state.items():
+                if key.startswith("RAYCAST"):
+                    prefix = "RF" if "FRONT" in key else "RB"
+                    for agent_id, ray_data in agents_dict.items():
+                        compressed = self._compress_raycast(ray_data)
+                        content_text += f"[{prefix} {agent_id}] {compressed}\n"
+
+        # 3. Composizione Human Message
+        human_text = (
+            f"### HISTORY\n{self.history if self.history else 'None'}\n\n"
+            f"### CURRENT OBSERVATIONS\n{content_text}"
+        )
+
+        content = [{"type": "text", "text": human_text}]
+
+       
+        for key in ["VISUAL", "GRID"]:
+            if (key == "VISUAL" and self.use_visual) or (key == "GRID" and self.use_grid):
+                images = state.get(key, {})
+                for agent_id, img_b64 in images.items():
+                    content.append({
+                        "type": "image_url",
+                        "image_url": {"url": f"data:image/png;base64,{img_b64}"}
+                    })
+
+        return {"sys_msg": self.system_msg, "hum_msg": content}
 
     def _format_action_schema(self):
-        """
-        Crea una stringa formattata per l'LLM che mostra SOLO nomi e opzioni.
-        NASCONDE i valori numerici.
-        Nel prompt non facciamo distinzioni tra continue e discrete
-        """
-        schema = "---Actions---"
-        
-        if self.actions.get("continuous"):
-            #schema += "--- Continuous Actions ---\n"
-            for name, details in self.actions["continuous"].items():
-                desc = f" ({details['description']})" if details.get('description') else ""
-                schema += f"- **{name}**{desc}: {details['options']}\n"
-
-        if self.actions.get("discrete"):
-            #schema += "\n--- Discrete Actions ---\n"
-            for name, details in self.actions["discrete"].items():
-                desc = f" ({details['description']})" if details.get('description') else ""
-                schema += f"- **{name}**{desc}: {details['options']}\n"
-                
+        schema = ""
+        for action_type in ["continuous", "discrete"]:
+            if self.actions.get(action_type):
+                for name, details in self.actions[action_type].items():
+                    schema += f"- {name}: {details['options']}\n"
         return schema
     
     def _format_grid_color_schema(self):
-        result = []
-        for item in self.grid_color_legend:
-            line = f"- **{item['color']}**: {item['object']}"
-            if 'desc' in item:
-                line += f" ({item['desc']})"
-            result.append(line)
-        return "".join(result)
+        return "".join([f"- {item['color']}: {item['object']}\n" for item in self.grid_color_legend])

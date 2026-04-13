@@ -24,22 +24,22 @@ from datetime import datetime
 
 class OracleSideChannel(SideChannel):
 
-    def __init__(self, id, step) -> None:
+    def __init__(self, id, log_folder) -> None:
         super().__init__(uuid.UUID("621f0a70-4f87-11ea-a6bf-784f4387d1f7"))
 
-        #self.worker = threading.Thread(target=self._on_update, daemon=True)
+        self.worker = threading.Thread(target=self._on_update, daemon=True)
         self.last_heartbeat_time = time.time()
         self.timeout_seconds = 100
         self.history = []
         self.history_length = 100
-        self.csv_path = f"bug_log_drl_llm_{id}.csv"
+        self.csv_path = f"bug_log_drl_{id}.csv"
 
         if not os.path.exists(self.csv_path):
             with open(self.csv_path, "w", newline="") as f:
                 writer = csv.writer(f)
                 writer.writerow(["timestamp", "step", "oracle", "bug_type", "message"])
         self.bug_detected = "None"
-        self.step = 0
+        self.step = self._load_base_step(log_folder)
         # atexit.register(self._on_python_exit)
 
     def on_message_received(self, msg: IncomingMessage) -> None:
@@ -54,7 +54,7 @@ class OracleSideChannel(SideChannel):
             oracle_name = parts[1]
             bug_type = parts[2]
             bug_message = parts[3]
-            self.step = int(parts[4])
+            #self.step = int(parts[4])
 
             # ORACLE_NAME: DAMAGE ORACLE
             print(f"[{oracle_name}] Bug detected")
@@ -87,7 +87,7 @@ class OracleSideChannel(SideChannel):
             #self.reset_environment()
             parts = message_content.split('|')
             self.step = int(parts[1])
-            #self.worker.start()
+            self.worker.start()
 
         # --- ALIVE: heartbeat from HangOracle ---
         elif message_content.startswith('[ALIVE]'):

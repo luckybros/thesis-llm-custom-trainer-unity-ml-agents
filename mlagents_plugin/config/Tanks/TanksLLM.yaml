@@ -1,7 +1,8 @@
 llm_settings:
   game_desc: |
     Tanks is a simple game where tanks compete in a battle arena. Yout objective is destory
-    the other player, you can shoot and take power ups.
+    the other player, you can shoot and take power ups. Power Ups can help winning, since they provide
+    temporary buffs like increased speed, damage reduction, fast shooting or healing.
   agent_role: |
     You are a game AI assistant deployed in the testing 
     environment of Tanks. You need to make decisions for various types of tasks 
@@ -18,6 +19,11 @@ llm_settings:
     You MUST structure your response in two parts:
     1. [Reasoning]: Explain your thought process, analyzing observations and history.
     2. [Action]: The final strict format for the agent.
+    IMPORTANT RULES:
+    1. You MUST output EXACTLY ONE choice for EACH of the following action categories: Move, Turn, Shoot.
+    2. You CANNOT skip any category. Even if you don't want to move or turn, you MUST write 'Stay' for that category.
+    3. You CANNOT invent choices. You MUST use exactly the strings provided in the 'options' list. 
+       - E.g., for Shoot, use "Shoot" or "Don't shoot". Do NOT write "Shoot at enemy".
     Always reply in the following format:
     Reasoning:
     <write your reasoning here>
@@ -36,8 +42,8 @@ llm_settings:
         Don't shoot
     Do not add extra words AFTER the action line. Never change the format of the action block.
   history_length: 3
-  model_name: meta-llama/llama-4-scout-17b-16e-instruct
-  task: Win the match.
+  model_name: openai/gpt-oss-120b
+  task: Choose the best action for current game state in order explore the game states and win the game.
   actions: 
     discrete:
       - name: Move
@@ -59,15 +65,69 @@ llm_settings:
   num_agents: 1
   features: 
     vectorial:
+      pos_x:
+        type: "BUCKET"
+        indices: [0]
+        mapping:
+          - label: "FAR_LEFT"
+            min: -1.1
+            max: -0.6
+          - label: "LEFT"
+            min: -0.59
+            max: -0.2
+          - label: "CENTER_X"
+            min: -0.19
+            max: 0.2
+          - label: "RIGHT"
+            min: 0.21
+            max: 0.6
+          - label: "FAR_RIGHT"
+            min: 0.61
+            max: 1.1
+      pos_z:
+        type: "BUCKET"
+        indices: [1]
+        mapping:
+          - label: "BOTTOM"
+            min: -1.1
+            max: -0.6
+          - label: "BACK"
+            min: -0.59
+            max: -0.2
+          - label: "CENTER_Z"
+            min: -0.19
+            max: 0.2
+          - label: "FRONT"
+            min: 0.21
+            max: 0.6
+          - label: "FAR_FRONT"
+            min: 0.61
+            max: 1.1
       can_shoot:
         type: "BOOL"
-        indices: [0]
+        indices: [2]
         mapping:
           0: "CAN'T SHOOT"
           1: "CAN SHOOT"
       health:
         type: "BUCKET"
-        indices: [1]
+        indices: [3]
+        mapping:
+          - label: "CRITICAL"
+            min: 0.0
+            max: 0.25
+          - label: "LOW"
+            min: 0.251
+            max: 0.50
+          - label: "MEDIUM"
+            min: 0.51
+            max: 0.80
+          - label: "HEALTHY"
+            min: 0.81
+            max: 1.1
+      enemy_health:
+        type: "BUCKET"
+        indices: [4]
         mapping:
           - label: "CRITICAL"
             min: 0.0
@@ -83,7 +143,7 @@ llm_settings:
             max: 1.1
       power_up:
         type: "ONE_HOT"
-        indices: [2, 3, 4, 5, 6, 7, 8]
+        indices: [5, 6, 7, 8, 9, 10, 11]
         mapping:
           0: "None"
           1: "Speed Up"
@@ -107,14 +167,17 @@ llm_settings:
           SLIGHT_RIGHT, RIGHT, FAR_RIGHT
         ] # 7 direzioni logiche
         distance:
-          - label: CLOSE
+          - label: IMMEDIATE
             min: 0.0
-            max: 0.3
+            max: 0.2
+          - label: CLOSE
+            min: 0.2
+            max: 0.5
           - label: MEDIUM
-            min: 0.3
-            max: 0.7
+            min: 0.5
+            max: 0.8
           - label: FAR
-            min: 0.7   
+            min: 0.8   
             max: 1.1
       RAYCAST_BACK:
         detectable_tags:

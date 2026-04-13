@@ -29,12 +29,13 @@ class ZMQCommunicatorClient(BaseCommunicationClient):
         self.socket.send_json(payload)
         self.socket.recv_json()
 
-    def recieve_action_from_llm(self, obs):
+    def recieve_action_from_llm(self, obs, selected_index):
         # if self.is_visual:
         payload = {}
 
         #print(f"Obs in client: {obs}")
 
+        """
         for observation_type in self.observation_types:
             print(f"OBSERVATION TYPE: {observation_type['name']}")
             data = obs[observation_type['index']]
@@ -56,6 +57,41 @@ class ZMQCommunicatorClient(BaseCommunicationClient):
                 data = {f"agent_{i}": state.tolist() for i, state in enumerate(data)}
             
             payload[key] = data
+        
+        """
+
+        
+        for observation_type in self.observation_types:
+            #print(f"OBSERVATION TYPE: {observation_type['name']}")
+
+            data_batch = obs[observation_type['index']]
+            #print(f"Data batch shape: {data_batch}")
+
+            agent_data = data_batch[selected_index : selected_index + 1]
+            #print(f"agent_data: {agent_data}")
+
+            key = observation_type.get('name', observation_type['type'])
+
+            agent_key = f"agent_{selected_index}"
+
+            if observation_type['type'] == 'VISUAL':
+                agent_data = self.image_processer.process_batch_images(agent_data)
+                agent_data = {agent_key: agent_data[0]}
+            elif observation_type['type'] == 'GRID':
+                agent_data = self.image_processer.process_grid_images(obs_list=agent_data, settings=observation_type)
+                agent_data = {agent_key: agent_data[0]}
+            elif observation_type['type'] == 'RAYCAST':
+                if (observation_type['name'] == 'RAYCAST_FRONT'):
+                    agent_data = agent_data[:, -21*5:]
+                else:
+                    agent_data = agent_data[:, -9*5:]
+                agent_data = {agent_key: agent_data[0].tolist()}
+
+            else:
+                agent_data = {agent_key: agent_data[0].tolist()}
+
+            payload[key] = agent_data
+        
         """
         if self.use_visual_obs:
             visual_obs = obs[0]
@@ -74,7 +110,7 @@ class ZMQCommunicatorClient(BaseCommunicationClient):
             payload["vectorial"] = {f"agent_{i}": state.tolist() for i, state in enumerate(obs)}
         """
         
-        print(f"Obs in client: {payload}")
+        #print(f"Obs in client: {payload}")
         self.socket.send_json(payload)
         data = self.socket.recv_json()
         return data

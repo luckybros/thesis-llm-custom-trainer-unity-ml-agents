@@ -38,9 +38,13 @@ class LLMGhostTrainer(GhostTrainer):
             for brain_name in self._team_to_name_to_policy_queue[team_id]:
                 behavior_id = create_name_behavior_id(brain_name, team_id)
                 policy = self.get_policy(behavior_id)
-                if team_id == self._learning_team:
-                    policy.set_ghost_frozen(False)
-                else:
-                    policy.set_ghost_frozen(True)
+                if isinstance(policy, TorchLLMPolicy):
+                    is_frozen = (team_id != self._learning_team)
+                    policy.set_ghost_frozen(is_frozen)
+                    
+                    # IL PASSAGGIO CRITICO:
+                    # Rimettiamo la policy nella coda in modo che l'Environment Worker 
+                    # riceva l'oggetto aggiornato con il nuovo valore del flag!
+                    self._team_to_name_to_policy_queue[team_id][brain_name].put(policy)
 
     

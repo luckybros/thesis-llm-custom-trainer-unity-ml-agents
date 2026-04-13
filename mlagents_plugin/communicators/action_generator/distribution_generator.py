@@ -1,4 +1,5 @@
 import numpy as np
+import difflib
 class DistributionGenerator:
 
     def __init__(self, settings):
@@ -69,7 +70,22 @@ class DistributionGenerator:
         return distributions
 
     def get_index_of_action(self, action: str, choice: str, continuous: bool) -> int:
-        return self.actions['continuous' if continuous else 'discrete'][action]['options'].index(choice)
+        category = 'continuous' if continuous else 'discrete'
+        valid_options = self.actions[category][action]['options']
+        try:
+            return valid_options.index(choice)
+        except ValueError:
+            # substring della risposta del modello
+            for i, opt in enumerate(valid_options):
+                if opt.lower() in choice.lower() or choice.lower() in opt.lower():
+                    print(f"Recovery: Corretta azione contenuta: '{choice}' -> '{opt}'")
+                    return i
+                
+            matches = difflib.get_close_matches(choice, valid_options, n=1, cutoff=0.3)
+            if matches:
+                return valid_options.index(matches[0])
+            
+            return 0
     
     def get_continuous_value_by_index(self, action, idx) -> float:
         return self.actions['continuous'][action]['values'][idx]

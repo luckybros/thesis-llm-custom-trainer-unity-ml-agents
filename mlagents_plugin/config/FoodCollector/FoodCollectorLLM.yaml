@@ -46,7 +46,7 @@ llm_settings:
       - name: Move Forward/Backward
         options: [Backward, Forward]
         values: [-1.0, 1.0]
-        desctioption: >
+        description: >
           Controls movement along the longitudinal axis.
       - name: Move Sideways 
         options: [Left, Right]

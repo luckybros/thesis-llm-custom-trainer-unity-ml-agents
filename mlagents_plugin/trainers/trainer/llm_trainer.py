@@ -70,6 +70,7 @@ class LLMTrainer(PPOTrainer):
         # would save all buffer without the LLM's log probs
 
         #logger.info(f"trajectory: {trajectory}")
+        
         self._maybe_write_summary(self.get_step + len(trajectory.steps))
         self._maybe_save_model(self.get_step + len(trajectory.steps))
         self._increment_step(len(trajectory.steps), trajectory.behavior_id)
@@ -118,6 +119,7 @@ class LLMTrainer(PPOTrainer):
             evaluate_result = (
                 reward_signal.evaluate(agent_buffer_trajectory) * reward_signal.strength
             )
+            #logger.info(f"name{name}: signal: {reward_signal} - value:{reward_signal.evaluate(agent_buffer_trajectory)} - strength: {reward_signal.strength}") 
             agent_buffer_trajectory[RewardSignalUtil.rewards_key(name)].extend(
                 evaluate_result
             )
@@ -174,6 +176,7 @@ class LLMTrainer(PPOTrainer):
 
         # è vero qui li raggruppo per timestamp ma solo perché sono stati salvati cosi prima
         #logger.info(f"llm_log_probs process_trajectory: {llm_log_probs}")
+        #logger.info(f"🧠 [LEARNER] _process_trajectory chiamato sull'oggetto in memoria: {id(self)}")
         #if not isinstance(llm_log_probs, dict):
         #    logger.warning(f"Attenzione: llm_log_probs non è un dict ma {type(llm_log_probs)}!")
 
@@ -185,8 +188,8 @@ class LLMTrainer(PPOTrainer):
 
         # check per vedere quale elemento non ha gli stessi elementi
         #for key, data in agent_buffer_trajectory.items():
-            #logger.info(f"Key: {key}, Length: {len(data)}")
-        #logger.info(f"agent_buffer_trajectory :{agent_buffer_trajectory}")
+        #    logger.info(f"Key: {key}, Length: {len(data)}")
+        #logger.info(f"agent_buffer_trajectory :{agent_buffer_trajectory[]}")
         # If this was a terminal trajectory, append stats and reset reward collection
         if trajectory.done_reached:
             self._update_end_episode_stats(agent_id, self.optimizer)

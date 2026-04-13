@@ -21,12 +21,16 @@ class LLMUtils:
         k_vals = []
         if discrete_1 is not None and discrete_2 is not None:
             for logits1, logits2 in zip(discrete_1, discrete_2):
-                logits1 = Categorical(logits=logits1)
+                cat_logits1 = Categorical(logits=logits1)
 
                 with torch.no_grad():
-                    logits2 = Categorical(logits=logits2)
+                    eps = 1e-6
+                    smoothed_probs = logits2 + eps
+                    # Rinormalizziamo per far sì che la somma sia esattamente 1.0
+                    smoothed_probs = smoothed_probs / smoothed_probs.sum(dim=-1, keepdim=True)
+                    cat_logits2 = Categorical(probs=smoothed_probs)
 
-                kl_loss = kl_divergence(logits1, logits2).mean()
+                kl_loss = kl_divergence(cat_logits1, cat_logits2).mean()
                 k_vals.append(kl_loss)
 
         if continuous_1 is not None and continuous_2 is not None:
@@ -49,7 +53,7 @@ class LLMUtils:
                 k_vals.append(kl_loss)
                 
         k_loss = torch.stack(k_vals).mean()
-        return kl_loss
+        return k_loss
     
     @staticmethod
     def squeeze_list_dim(batch_list):
@@ -115,3 +119,29 @@ class LLMUtils:
             x[mask_tensor] for x in discrete_log_probs
         ]
         return filtered
+    
+    @staticmethod
+    def transpose_llm_probs_to_mlagents_format(llm_probs: list) -> list:
+        """
+        Trasforma una lista 3D [timestamp][n_azioni][distribuzione]
+        in una lista di tensori 2D, uno per ogni azione [timestamp][distribuzione].
+        """
+        # Controllo di sicurezza: se la lista è vuota, restituiamo una lista vuota
+        if not llm_probs or not llm_probs[0]:
+            return []
+
+        # llm_probs[0] contiene le azioni del primo timestamp
+        num_actions = len(llm_probs[0]) 
+        tensor_list = []
+
+        # Iteriamo su ogni singola azione (es: 0=Move, 1=Turn, 2=Shoot)
+        for a in range(num_actions):
+            # Estraiamo i dati dell'azione 'a' per TUTTI i timestamp
+            # List comprehension che raggruppa verticalmente
+            action_data_across_time = [timestep[a] for timestep in llm_probs]
+            
+            # Ora abbiamo un rettangolo perfetto, possiamo farne un tensore!
+            action_tensor = torch.as_tensor(action_data_across_time, dtype=torch.float32)
+            tensor_list.append(action_tensor)
+
+        return tensor_list
