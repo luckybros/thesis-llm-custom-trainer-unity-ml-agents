@@ -1,6 +1,7 @@
 *.egg-info/
 *.__pycache__/
 *.png
+*.csv
 
 mlagents_plugin/config/logs_immagini/
 
@@ -28,3 +29,9 @@ bug_log.csv
 # Ignora i metadati di Python
 *.egg-info/
 __pycache__/
+
+peppedati.py
+random_agent.py
+react_agent.pt
+mlagents_train.py
+mlagents_train_two.py

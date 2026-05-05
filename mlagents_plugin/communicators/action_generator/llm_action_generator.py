@@ -21,12 +21,13 @@ class LLMActionGenerator:
     def get_llm_policy(self, raw_state):
 
         abstract_state = self.abstraction_module.discretize(raw_state)
+        print(f"[STATE]: {abstract_state}")
         prompt = self.prompt_builder.build_prompt(abstract_state)
         #print(f"[PROMPT]: {prompt}")
         model_output = self.model.call_llm(prompt)
-        print(f"[MODEL OUTPUT]: {model_output}")
+        #print(f"[MODEL OUTPUT]: {model_output}")
         action_dict = self.action_parser.parse_actions(model_output)
-        print(f"[PARSED ACTIONS]: {action_dict}")
+        #print(f"[PARSED ACTIONS]: {action_dict}")
         distributions = self.dist_generator.generate_distributions(action_dict)
         
         distributions = self._check_distributions(distributions)

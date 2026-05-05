@@ -110,7 +110,6 @@ class ZMQCommunicatorClient(BaseCommunicationClient):
             payload["vectorial"] = {f"agent_{i}": state.tolist() for i, state in enumerate(obs)}
         """
         
-        #print(f"Obs in client: {payload}")
         self.socket.send_json(payload)
         data = self.socket.recv_json()
         return data
