@@ -53,6 +53,9 @@ class LLMSettings:
         self.num_continuous_actions = other_settings['num_continuous_actions']
 
         self.features = llm_config.get('features', False)
+        self.obs_template = llm_config.get('obs_template', False)
+
+        self.raycast_keys = list((self.features.get("raycast") or {}).keys())
 
 
     def get_index_of_action(self, action: str, choice: str, continuous: bool) -> int:

@@ -28,7 +28,6 @@ class ZMQCommunicatorServer:
         if self.action_generator is None:
             payload = {"response": "OK"}
             if data.get("type") == "init":
-                print('init!')
                 discrete_branches = tuple(data["discrete_branches"])
                 num_agents = data["num_agents"]
                 num_continuous_actions = data["num_continuous_actions"]
@@ -56,9 +55,16 @@ class ZMQCommunicatorServer:
         if data.get("type") == "init":
             return json.dumps({"response": "Already initialized"})
         
-        print(f"state: {data}")
-        llm_policy = self.action_generator.get_llm_policy(data)
-        return llm_policy
+        elif data.get("type") == "llm_only":
+            llm_action = self.action_generator.get_llm_response(data)
+            return llm_action
+        
+        elif data.get("type") == "drl_llm":
+            llm_policy = self.action_generator.get_llm_policy(data)
+            return llm_policy
+        
+        return None
+        
 
 
 def main():

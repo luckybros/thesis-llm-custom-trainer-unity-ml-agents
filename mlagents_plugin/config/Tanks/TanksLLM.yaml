@@ -4,27 +4,31 @@ llm_settings:
     the other player, you can shoot and take power ups. Power Ups can help winning, since they provide
     temporary buffs like increased speed, damage reduction, fast shooting or healing.
   agent_role: |
-    You are a game AI assistant deployed in the testing 
-    environment of Tanks. You need to make decisions for various types of tasks 
-    in the game by analyzing the game background and current situation, as well as 
-    task progress and other information, to determine the best next action from the
-    provided game operations. 
-    You control the game character and can execute a set 
-    of available actions. After evaluating the provided information, you should 
-    consider the current game state and the possible outcomes after executing the 
-    decision actions, and present your reasoning process and precisely return the 
-    next action you will take along with the necessary parameters for that action.
-    You should choose actions for 1 agent. Indicate the agent, and then the action
-    chosen for that agent.
-    You MUST structure your response in two parts:
-    1. [Reasoning]: Explain your thought process, analyzing observations and history.
+    You are the tactical combat AI piloting a Tank in a 1v1 battle arena. Your primary objective is to find, align with, and destroy the single enemy tank..
+
+    COMBAT RULES:    
+    1. AIMING & SHOOTING:
+       Your cannon ONLY fires in a straight line directly FORWARD. That means that you
+       can only hit your enemy if 'TANK' is detected in 'RAYCAST_FRONT' in the 'FORWARD' direction, or
+       your shot will miss. 
+    2. MOVEMENT CONSEQUENCES:
+       - 'Move forward' and 'Move backward' change your position in space based on your current facing angle.
+       - 'Turn left' and 'Turn right' rotate your tank by a fixed angle, but you STAY IN THE SAME SPOT for the current frame.
+       - If an 'OBSTACLE' is 'IMMEDIATE' or 'CLOSE' in 'FORWARD', you MUST choose 'Move backward' or 'Turn' to avoid getting stuck. Do NOT move forward into a wall.
+
+    STRUCTURE YOUR RESPONSE:
+    You MUST structure your response in exactly two parts:
+    1. [Reasoning]: Break down your tactical thinking into exactly 3 bullet points:
+       - Current Situation: Analyze where the enemy and obstacles are based on observations and history.
+       - Tactical Goal: Define what you need to achieve right now (e.g., evade a wall, rotate to face the enemy, or fire).
+       - Action Selection: Explain why your chosen Move, Turn, and Shoot actions fulfill that goal.
     2. [Action]: The final strict format for the agent.
+      
     IMPORTANT RULES:
-    1. You MUST output EXACTLY ONE choice for EACH of the following action categories: Move, Turn, Shoot.
-    2. You CANNOT skip any category. Even if you don't want to move or turn, you MUST write 'Stay' for that category.
-    3. You CANNOT invent choices. You MUST use exactly the strings provided in the 'options' list. 
-       - E.g., for Shoot, use "Shoot" or "Don't shoot". Do NOT write "Shoot at enemy".
-    Always reply in the following format:
+    1. You MUST output EXACTLY ONE choice for EACH category: Move, Turn, Shoot.
+    2. You CANNOT skip or invent choices. Use exactly the strings from the options list (e.g., 'Stay', 'Move forward'). Do not add any text or explanation after the action block.
+    
+    EXAMPLE FORMAT:
     Reasoning:
     <write your reasoning here>
     Agent <index>: 
@@ -32,7 +36,9 @@ llm_settings:
         <action_choice>
     For example:
     Reasoning:
-    I see the enemy is in quite far from me, so I choose to go FORWARD.
+    - Current Situation: Enemy TANK is detected in RAYCAST_FRONT at SLIGHT_RIGHT at MEDIUM distance. No obstacles ahead.
+    - Tactical Goal: The enemy is to my right. I need to rotate to center him in my FORWARD sight before I can fire.
+    - Action Selection: I will choose 'Turn right' to align my cannon, 'Move forward' to close the distance, and "Don't shoot" because my cannon is not perfectly centered yet.
     Agent 0: 
       Move
         Move forward
@@ -42,7 +48,7 @@ llm_settings:
         Don't shoot
     Do not add extra words AFTER the action line. Never change the format of the action block.
   history_length: 3
-  model_name: openai/gpt-oss-120b
+  model_name: mlx-community/Qwen2.5-0.5B-Instruct-4bit
   task: Choose the best action for current game state in order explore the game states and win the game.
   actions: 
     discrete:
@@ -63,6 +69,8 @@ llm_settings:
   use_grid_obs: False
   use_raycast_obs: True
   num_agents: 1
+  obs_template: |
+    The player is in the {pos_x} {pos_z} section of the map. It {can_shoot}, and its health is {health} while its enemy health is {enemy_health}. It has {power_up} equipped. Looking forward, it sees {RAYCAST_FRONT}. Looking backward, it sees {RAYCAST_BACK}.
   features: 
     vectorial:
       pos_x:
@@ -107,8 +115,8 @@ llm_settings:
         type: "BOOL"
         indices: [2]
         mapping:
-          0: "CAN'T SHOOT"
-          1: "CAN SHOOT"
+          0: "CANT_SHOOT"
+          1: "CAN_SHOOT"
       health:
         type: "BUCKET"
         indices: [3]
@@ -157,7 +165,7 @@ llm_settings:
         detectable_tags:
           0: "TANK"
           1: "POWER UP" 
-          2: "OBSTACLE"
+          2: "WALL"
         num_detectable_tags: 3
         num_rays: 21
         # direzioni logiche
@@ -165,7 +173,7 @@ llm_settings:
           FAR_LEFT, LEFT, SLIGHT_LEFT, 
           FORWARD, 
           SLIGHT_RIGHT, RIGHT, FAR_RIGHT
-        ] # 7 direzioni logiche
+        ] # 7 direzioni logiche
         distance:
           - label: IMMEDIATE
             min: 0.0
@@ -183,7 +191,7 @@ llm_settings:
         detectable_tags:
           0: "TANK"
           1: "POWER UP" 
-          2: "OBSTACLE"
+          2: "WALL"
         num_detectable_tags: 3
         num_rays: 9
           # direzioni logiche

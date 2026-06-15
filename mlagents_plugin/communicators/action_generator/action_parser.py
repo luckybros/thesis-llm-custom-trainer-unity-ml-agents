@@ -27,7 +27,6 @@ class ActionParser:
                     result[idx]["continuous"][act_name] = choice
 
             # lista di dict
-            print(self.actions["discrete"])
             for act_name in self.actions["discrete"]:
                 pattern = re.escape(act_name) + r'\s*\n\s*(.+)'
                 match = re.search(pattern, acts_str)

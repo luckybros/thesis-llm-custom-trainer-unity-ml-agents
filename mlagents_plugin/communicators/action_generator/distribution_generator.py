@@ -69,6 +69,24 @@ class DistributionGenerator:
 
         return distributions
 
+    def get_actions(self, result):
+        # HAVE TO RETURN A LIST OF LIST FOR EVERY AGENT
+        final_actions = [] 
+        for idx, agent_values in enumerate(result.values()):
+            agent_result = []
+            discrete_value = agent_values['discrete']
+            
+            for i, (k, v) in enumerate(discrete_value.items()):
+                indx = self.get_index_of_action(k, v, False)
+                agent_result.append(indx)
+            
+            final_actions.append(agent_result)
+
+        if (len(final_actions)) == 1:
+            return final_actions[0]
+
+        return final_actions
+
     def get_index_of_action(self, action: str, choice: str, continuous: bool) -> int:
         category = 'continuous' if continuous else 'discrete'
         valid_options = self.actions[category][action]['options']

@@ -68,14 +68,6 @@ class TorchLLMPolicy(TorchPolicy):
     ) -> ActionInfo:
         # LLM part
         obs = decision_requests.obs
-        #logger.info(f"🕵️‍♂️ [ACTOR] get_action chiamato sull'oggetto in memoria: {id(self)}")
-        """
-        logger.info(f"len obs: {lebsn(decision_requests.obs)}")
-        if (len(decision_requests.obs) == 1):
-            logger.info("ONLY VECTOR")
-        elif (len(decision_requests.obs) >= 1):
-            logger.info("VECTOR AND VISUAL")
-        """
                     
         global_agent_ids = [
             get_global_agent_id(worker_id, int(agent_id))
@@ -90,12 +82,23 @@ class TorchLLMPolicy(TorchPolicy):
         # The problem is that process trajectory can't have missing piece of information, so we have
         # to add empty lists when we don't call the llm
         if refresh_llm and not self._is_ghost_frozen:
+            for agent_id in global_agent_ids:
+                selected_index = global_agent_ids.index(agent_id)
+                llm_run_out = self.llm_evaluate(decision_requests, selected_index)
+                if "discrete" in llm_run_out:
+                    discrete_log_probs = llm_run_out["discrete"]
+                    if agent_id not in TorchLLMPolicy.GLOBAL_LLM_BUFFERS:
+                        TorchLLMPolicy.GLOBAL_LLM_BUFFERS[agent_id] = LLMBuffer()
+                    TorchLLMPolicy.GLOBAL_LLM_BUFFERS[agent_id].add_entry(LLMBufferKey.LLM_LOG_DISCRETE_LOG_PROBS, discrete_log_probs['agent_0-0'])
+                    TorchLLMPolicy.GLOBAL_LLM_BUFFERS[agent_id].add_entry(LLMBufferKey.LLM_MASK_DISCRETE, 1)
+
+            """
             selected_agent_id = random.choice(global_agent_ids)
             selected_index = global_agent_ids.index(selected_agent_id)
             llm_run_out = self.llm_evaluate(decision_requests, selected_index)  
             if "discrete" in llm_run_out:
                 discrete_log_probs = llm_run_out["discrete"]
-                #logger.info(f"Discrete log probs: {discrete_log_probs}")
+                logger.info(f"Discrete log probs: {discrete_log_probs}")
                 for agent_id in global_agent_ids:
                     if agent_id not in TorchLLMPolicy.GLOBAL_LLM_BUFFERS:
                         #logger.info(f"{agent_id} not in llm_buffer, creating a new one")
@@ -111,9 +114,9 @@ class TorchLLMPolicy(TorchPolicy):
                     else:
                         TorchLLMPolicy.GLOBAL_LLM_BUFFERS[agent_id].add_entry(LLMBufferKey.LLM_LOG_DISCRETE_LOG_PROBS, [])
                         TorchLLMPolicy.GLOBAL_LLM_BUFFERS[agent_id].add_entry(LLMBufferKey.LLM_MASK_DISCRETE, 0)   
+            """
 
-
-                """
+            """
                 for agent_id, dist in discrete_log_probs.items():
                     if agent_id not in self.agent_llm_buffers:
                         self.agent_llm_buffers[agent_id] = LLMBuffer()
@@ -127,9 +130,9 @@ class TorchLLMPolicy(TorchPolicy):
                     else:
                         self.agent_llm_buffers[agent_id].add_entry(LLMBufferKey.LLM_LOG_DISCRETE_LOG_PROBS, [])
                         self.agent_llm_buffers[agent_id].add_entry(LLMBufferKey.LLM_MASK_DISCRETE, 0)
-                """
-                    #logger.info(f"aaaa {agent_id}")
+            """
 
+            """
             if "continuous" in llm_run_out:
                 continuous_log_probs = llm_run_out["continuous"]
                 for agent_id, dist in continuous_log_probs.items():
@@ -138,6 +141,7 @@ class TorchLLMPolicy(TorchPolicy):
                     #logger.info(f"cccc {agent_id}")
                     TorchLLMPolicy.GLOBAL_LLM_BUFFERS[agent_id].add_entry(LLMBufferKey.LLM_LOG_CONTINUOUS_LOG_PROBS, dist)
                     TorchLLMPolicy.GLOBAL_LLM_BUFFERS[agent_id].add_entry(LLMBufferKey.LLM_MASK_CONTINUOUS, 1)
+            """
 
             self._llm_step_counter = 0
 
@@ -235,7 +239,7 @@ class TorchLLMPolicy(TorchPolicy):
             )
         masks = self._extract_masks(decision_requests)
 
-        llm_run_out = self.communicator_client.recieve_action_from_llm(obs, selected_index) # Dict[str, Any]
+        llm_run_out = self.communicator_client.receive_distribution_from_llm(obs, selected_index) # Dict[str, Any]
         return llm_run_out
         
     def pop_llm_buffer_data(

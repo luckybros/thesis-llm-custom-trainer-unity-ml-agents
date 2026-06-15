@@ -1,0 +1,137 @@
+llm_settings:
+  game_desc: |
+    The FPS Microgame is a 3D First Person Shooter game where your objective is exploring and fight enemies avoiding getting hit. You can move, turn, and shoot, and there are power ups that heal you. Enemies are fast shooter and will chase you immediately and will shoot you.
+  agent_role: |
+    You are the tactical combat AI playing the game. Your primary objective is to find, align with, and destroy the enemies.
+
+    COMBAT RULES:    
+    1. AIMING & SHOOTING:
+       Your cannon ONLY fires in a straight line directly FORWARD. That means that you
+       can only hit your enemy if 'ENEMY' is detected in 'RAYCAST_FRONT' in the 'FORWARD' direction, or
+       your shot will miss, trying to avoid the enemies projectiles. Your strategy should be be moving and shooting, hitting the enemy
+       and avoiding getting hit.
+    2. MOVEMENT CONSEQUENCES:
+       - 'Move forward' and 'Move sideways' change your position in space based on your current facing angle.
+       - 'Turn left' and 'Turn right' rotate your character by a fixed angle, but you STAY IN THE SAME SPOT for the current frame.
+
+    STRUCTURE YOUR RESPONSE:
+    You MUST structure your response in exactly two parts:
+    1. [Reasoning]: Break down your tactical thinking into exactly 3 bullet points:
+       - Current Situation: Analyze where the enemy and obstacles are based on observations and history.
+       - Tactical Goal: Define what you need to achieve right now (e.g., evade a wall, rotate to face the enemy, or fire).
+       - Action Selection: Explain why your chosen Move, Turn, and Shoot actions fulfill that goal.
+    2. [Action]: The final strict format for the agent.
+      
+    IMPORTANT RULES:
+    1. You MUST output EXACTLY ONE choice for EACH category: Move, Turn, Shoot.
+    2. You CANNOT skip or invent choices. Use exactly the strings from the options list (e.g., 'Stay', 'Move forward'). Do not add any text or explanation after the action block.
+    
+    EXAMPLE FORMAT:
+    Reasoning:
+    <write your reasoning here>
+    Agent <index>: 
+      <action_name>
+        <action_choice>
+    For example:
+    Reasoning:
+    - Current Situation: Enemy is detected in RAYCAST at SLIGHT_RIGHT at MEDIUM distance. No obstacles ahead.
+    - Tactical Goal: The enemy is to my right. I need to rotate to center him in my FORWARD sight before I can fire.
+    - Action Selection: I will choose 'Turn right' to align my cannon, 'Move forward' to close the distance, and "Don't shoot" because my cannon is not perfectly centered yet.
+    Agent 0: 
+      Move
+        Move forward
+      Turn
+        Stay
+      Shoot
+        Don't shoot
+    Do not add extra words AFTER the action line. Never change the format of the action block.
+  history_length: 3
+  model_name: openai/gpt-oss-120b
+  task: Choose the best action for current game state in order explore the game states and win the game.
+  actions: 
+    discrete:
+      - name: Move forward
+        options: [Stay, Move forward, Move backward]
+        description: >
+          Move the character forward or backward.
+      - name: Move sideways
+        options: [Stay, Move right, Move left]
+        description: >
+          Move the character right or left.
+      - name: Turn
+        options: [Stay, Turn right, Turn left]
+        description: >
+          Turn the direction which the character is facing.
+      - name: Shoot
+        options: [Don't shoot, Shoot]
+        description: >
+          Shoot a projectile in the direction which the character is facing.
+  use_visual_obs: False
+  use_vectorial_obs: True
+  use_grid_obs: False
+  use_raycast_obs: True
+  num_agents: 1
+  features: 
+    vectorial:
+      health:
+        type: "BUCKET"
+        indices: [0]
+        mapping:
+          - label: "CRITICAL"
+            min: 0.0
+            max: 0.25
+          - label: "LOW"
+            min: 0.251
+            max: 0.50
+          - label: "MEDIUM"
+            min: 0.51
+            max: 0.80
+          - label: "HEALTHY"
+            min: 0.81
+            max: 1.1
+    raycast:
+      RAYCAST_FRONT:
+        detectable_tags:
+          0: "WALL"
+          1: "ENEMY" 
+          2: "HEALTH"
+        num_detectable_tags: 3
+        num_rays: 15
+        # direzioni logiche
+        direction: [
+          LEFT, SLIGHT_LEFT, 
+          FORWARD, 
+          SLIGHT_RIGHT, RIGHT
+        ] # 7 direzioni logiche
+        distance:
+          - label: IMMEDIATE
+            min: 0.0
+            max: 0.2
+          - label: CLOSE
+            min: 0.2
+            max: 0.5
+          - label: MEDIUM
+            min: 0.5
+            max: 0.8
+          - label: FAR
+            min: 0.8   
+            max: 1.1
+      #is_shooting:
+      #  type: 'BOOL'
+      #  indices: [3]
+      #  mapping:
+      #    0: "IS_NOT_SHOOTING"
+      #    1: "IS_SHOOTING"
+  #grid_color_legend:
+  #  - object: "Tank"
+  #    color: "Red"
+  #    desc: "The tanks in the map, the player if it is at the center of the image"
+  #  - object: "Power Up"
+  #    color: "Light Blue"
+  #    desc: "Power up the player can take"
+  #  - object: "Wall"
+  #    color: "Gray"
+  #    desc: "Walls of the map"
+  #  - object: "Obstacle"
+  #    color: "Purple"
+  #    desc: "The player can't go past them"

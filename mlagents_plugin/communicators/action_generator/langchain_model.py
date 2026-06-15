@@ -24,10 +24,22 @@ class LangchainModel:
         #print(f'prompt: {prompt}')
             llm_choice = self.chain.invoke(prompt)
         #print(f"llm_choice: {llm_choice}")
+
+            if not self._is_output_valid(llm_choice):
+                print(f"Rilevato output incompleto/invalido: '{llm_choice}'. Attivazione fallback...")
+                try:
+                    llm_choice = self.fallback_chain.invoke(prompt)
+                    if not self._is_output_valid(llm_choice):
+                        return "Agent 0:\n  Move\n    Move forward\n  Turn\n    Stay\n  Shoot\n    Don't shoot"
+                    else:
+                        return llm_choice
+                except Exception as fallback_e:
+                    return "Agent 0:\n  Move\n    Move forward\n  Turn\n    Stay\n  Shoot\n    Don't shoot"
+            
             return llm_choice
         
         except Exception as e:
-            print(f"Error calling LLM: {e}")
+            #print(f"Error calling LLM: {e}")
             error_msg = str(e).lower()
 
             fallback_triggers = [
@@ -38,11 +50,15 @@ class LangchainModel:
             ]
             if any(trigger in error_msg for trigger in fallback_triggers):
                 try:
-                    return self.fallback_chain.invoke(prompt)
+                    llm_choice = self.fallback_chain.invoke(prompt)
+                    if not self._is_output_valid(llm_choice):
+                        return "Agent 0:\n  Move\n    Move forward\n  Turn\n    Stay\n  Shoot\n    Don't shoot"
+                    else:
+                        return llm_choice            
                 except Exception as fallback_e:
-                    return "Agent 0:\n  Move\n    Stay\n  Turn\n    Stay\n  Shoot\n    Don't shoot"
+                    return "Agent 0:\n  Move\n    Move forward\n  Turn\n    Stay\n  Shoot\n    Don't shoot"
                 
-            return "Agent 0:\n  Move\n    Stay\n  Turn\n    Stay\n  Shoot\n    Don't shoot"
+            return "Agent 0:\n  Move\n    Move forward\n  Turn\n    Stay\n  Shoot\n    Don't shoot"
     
     def _model_constructor(self, model_name):
         if model_name == "gemini-2.5-flash":
@@ -52,6 +68,18 @@ class LangchainModel:
         elif model_name == 'qwen3-vl:2b' or model_name == 'llama3.2':
             return ChatOllama(model=self.model_name, temperature=0)
         
+    def _is_output_valid(self, output: str) -> bool:
+        """
+        Controlla se l'output dell'LLM contiene la struttura sintattica minima richiesta.
+        Nel tuo caso, deve contenere i tre blocchi fondamentali: Move, Turn e Shoot.
+        """
+        if not output:
+            return False
+            
+        # Controlliamo la presenza delle tre macro-azioni necessarie
+        required_keywords = ["Move", "Turn", "Shoot"]
+        return all(keyword in output for keyword in required_keywords)
+    
     def _format_input(self, prompt: dict):
         return [
             SystemMessage(content=prompt['sys_msg']),

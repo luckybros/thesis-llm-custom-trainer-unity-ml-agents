@@ -24,7 +24,9 @@ logger = get_logger(__name__)
 
 @attr.s(auto_attribs=True)
 class LLMSettings(PPOSettings):
-    alpha : float = 0.1
+    alpha_initial: float = 0.1
+    alpha_final: float = 0.3
+    alpha_rate_schedule: ScheduleType = ScheduleType.LINEAR
     communicator : CommunicatorType = CommunicatorType.RANDOM
     llm_refresh_interval : int = 10
     observation_types : list = []
@@ -35,17 +37,13 @@ class TorchLLMOptimizer(TorchPPOOptimizer):
         self.hyperparameters: LLMSettings = cast(
             LLMSettings, trainer_settings.hyperparameters
         )
-        self.alpha = self.hyperparameters.alpha
-        """
-        Eventualmente,
-        per alpha relativo alla distanza,
+        #self.alpha = self.hyperparameters.alpha
         self.decay_alpha = ModelUtils.DecayedValue(
-            self.hyperparameters.alpha_schedule,
-            self.hyperparameters.alpha,
-            1e-5,
+            self.hyperparameters.alpha_rate_schedule,
+            self.hyperparameters.alpha_initial,
+            self.hyperparameters.alpha_final,
             self.trainer_settings.max_steps,
         )
-        """
 
     @timed
     def update(self, batch: AgentBuffer, num_sequences: int) -> Dict[str, float]:
@@ -53,7 +51,7 @@ class TorchLLMOptimizer(TorchPPOOptimizer):
         decay_lr = self.decay_learning_rate.get_value(self.policy.get_current_step())
         decay_eps = self.decay_epsilon.get_value(self.policy.get_current_step())
         decay_bet = self.decay_beta.get_value(self.policy.get_current_step())
-        decay_alpha = self.alpha    # per ora valore fisso
+        decay_alpha = self.decay_alpha.get_value(self.policy.get_current_step())
 
         returns = {}   
         old_values = {}   
@@ -214,7 +212,8 @@ class TorchLLMOptimizer(TorchPPOOptimizer):
             "Losses/LLM Loss": llm_loss.item(),
             "Policy/Learning Rate": decay_lr,
             "Policy/Epsilon": decay_eps,
-            "Policy/Beta": decay_bet
+            "Policy/Beta": decay_bet,
+            "Policy/Alpha": decay_alpha
         }
 
         return update_stats

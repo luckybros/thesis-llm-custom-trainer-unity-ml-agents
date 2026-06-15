@@ -14,5 +14,9 @@ class BaseCommunicationClient(ABC):
         self.observation_types = observation_types
 
     @abstractmethod
-    def recieve_action_from_llm(self, obs):
+    def receive_distribution_from_llm(self, obs):
+        pass
+
+    @abstractmethod
+    def receive_action_from_llm(self, obs):
         pass
