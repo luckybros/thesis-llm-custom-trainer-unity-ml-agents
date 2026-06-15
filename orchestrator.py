@@ -18,6 +18,8 @@ GAME_COMMAND = [
     MLAGENTS_LEARN_COMMAND,
     "mlagents_plugin/config/Tanks/TanksMLAgentsLLMPlugin.yaml",
     "--run-id=ehisonopiccolo",
+    "--env=mlagents_plugin/config/Tanks/TanksGameRL",
+    "--no-graphics",
     "--force"
 ]
 
