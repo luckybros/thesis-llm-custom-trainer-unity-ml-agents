@@ -48,7 +48,7 @@ llm_settings:
         Don't shoot
     Do not add extra words AFTER the action line. Never change the format of the action block.
   history_length: 3
-  model_name: mlx-community/Qwen2.5-0.5B-Instruct-4bit
+  model_name: qwen3-vl:2b
   task: Choose the best action for current game state in order explore the game states and win the game.
   actions: 
     discrete:

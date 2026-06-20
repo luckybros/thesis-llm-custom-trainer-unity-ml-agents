@@ -25,6 +25,14 @@ def run_ml_agents(base_seed):
     ]
 
     if not os.path.exists(results_path):
+        if os.path.exists('/Users/luketto/Library/Application Support/DefaultCompany/Tanks/TankStatesLog.txt'):
+            os.remove('/Users/luketto/Library/Application Support/DefaultCompany/Tanks/TankStatesLog.txt')
+            print("Deleted States Log")
+        if os.path.exists('/Users/luketto/Library/Application Support/DefaultCompany/Tanks/GlobalStatesLog.txt'):
+            os.remove('/Users/luketto/Library/Application Support/DefaultCompany/Tanks/GlobalStatesLog.txt')
+            print("Deleted Global States Log")
+        if os.path.exists('/Users/luketto/Library/Application Support/DefaultCompany/Tanks/ExploredTiles.txt'):
+            os.remove(('/Users/luketto/Library/Application Support/DefaultCompany/Tanks/ExploredTiles.txt'))
         print(f"[SUPERVISORE] Nessuna run precedente trovata per '{base_seed}'. Inizio da zero.")
     else:
         print(f"[SUPERVISORE] Run '{base_seed}' già esistente. Aggiungo --resume.")
@@ -80,12 +88,4 @@ if __name__ == "__main__":
     #args = parser.parse_args()
 
     for current_seed in range(1, NUM_SEEDS+1):
-        if os.path.exists('/Users/luketto/Library/Application Support/DefaultCompany/Tanks/TankStatesLog.txt'):
-            os.remove('/Users/luketto/Library/Application Support/DefaultCompany/Tanks/TankStatesLog.txt')
-            print("Deleted States Log")
-        if os.path.exists('/Users/luketto/Library/Application Support/DefaultCompany/Tanks/GlobalStatesLog.txt'):
-            os.remove('/Users/luketto/Library/Application Support/DefaultCompany/Tanks/GlobalStatesLog.txt')
-            print("Deleted Global States Log")
-        if os.path.exists('/Users/luketto/Library/Application Support/DefaultCompany/Tanks/ExploredTiles.txt'):
-            os.remove(('/Users/luketto/Library/Application Support/DefaultCompany/Tanks/ExploredTiles.txt'))
         run_ml_agents(current_seed)

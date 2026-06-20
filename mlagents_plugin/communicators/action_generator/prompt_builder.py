@@ -43,6 +43,7 @@ class PromptBuilder:
         if self.use_grid:
             self.grid_color_legend = settings.grid_color_legend
 
+
         self._initialize_system_message()
 
     def build_prompt(self, agent_id: str, state: dict):
@@ -100,20 +101,40 @@ class PromptBuilder:
         if len(self.agent_histories[agent_id]) > self.max_history:
             self.agent_histories[agent_id].pop(0)
 
-    def get_action_from_list(self, action_list):
+    def get_action_from_response_list(self, action_list):
+
         result = {0: {'discrete': {}}}
 
-        discrete_settings = self.settings.actions['discrete']
+        discrete_settings = self.actions['discrete']
 
-        for index, action in enumerate(discrete_settings):
-            action_name = action['name']
+        for index, (action_name, action) in enumerate(discrete_settings.items()):
             action_options = action['options']
 
+            print(f"action list: {action_list}")
             chosen_index = action_list[index]
 
             chosen_options = action_options[chosen_index]
             result[0]['discrete'][action_name] = chosen_options
         
+        return result
+    
+    def get_action_from_policy_list(self, action_list):
+        # {'discrete': {'agent_0-0': [[0.0, 1.0, 0.0], [0.0, 0.0, 1.0], [1.0, 0.0]]}}
+
+        result = {0: {'discrete': {}}}
+
+        action_list = action_list['discrete']['agent_0-0']
+        # [[0.0, 1.0, 0.0], [0.0, 0.0, 1.0], [1.0, 0.0]]
+
+        discrete_settings = self.actions['discrete']
+
+        for index, (action_name, action_options) in enumerate(discrete_settings.items()):
+            # i:0, k:Move, v:{'options': ['Stay', 'Move forward', 'Move backward'], 'description': 'Move the character forward or backward.\n'}
+            action_from_index = action_list[index]
+            idx_of_chosen_action = np.argmax(action_from_index)
+            chosen_option = action_options['options'][idx_of_chosen_action]
+            result[0]['discrete'][action_name] = chosen_option
+
         return result
 
     def _format_history(self, agent_id: str):

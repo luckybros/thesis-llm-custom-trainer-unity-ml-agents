@@ -31,7 +31,6 @@ bug_log.csv
 __pycache__/
 
 peppedati.py
-random_agent.py
 react_agent.py
 mlagents_train.py
 mlagents_train_two.py

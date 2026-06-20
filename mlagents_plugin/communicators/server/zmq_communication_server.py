@@ -53,6 +53,7 @@ class ZMQCommunicatorServer:
             return json.dumps(payload)
 
         if data.get("type") == "init":
+            self.action_generator.clear_cache()
             return json.dumps({"response": "Already initialized"})
         
         elif data.get("type") == "llm_only":

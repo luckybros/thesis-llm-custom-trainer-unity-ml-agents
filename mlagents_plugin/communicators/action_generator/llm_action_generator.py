@@ -2,8 +2,8 @@ from mlagents_plugin.communicators.action_generator.llm_settings import LLMSetti
 from mlagents_plugin.communicators.action_generator.state_abstration_module import StateAstractionModule
 from mlagents_plugin.communicators.action_generator.action_optimization_module import ActionOptimizationModule
 from mlagents_plugin.communicators.action_generator.prompt_builder import PromptBuilder
-#from mlagents_plugin.communicators.action_generator.langchain_model import LangchainModel
-from mlagents_plugin.communicators.action_generator.vllm_model import VLLMModel
+from mlagents_plugin.communicators.action_generator.langchain_model import LangchainModel
+#from mlagents_plugin.communicators.action_generator.vllm_model import VLLMModel
 from mlagents_plugin.communicators.action_generator.action_parser import ActionParser
 from mlagents_plugin.communicators.action_generator.distribution_generator import DistributionGenerator
 from mlagents_plugin.caches.hash_cache import LLMHashCache
@@ -18,7 +18,7 @@ class LLMActionGenerator:
         self.cache = LLMHashCache()
         self.action_optimization_module = ActionOptimizationModule(self.config)
         self.prompt_builder = PromptBuilder(self.config) # comune a tutti a prescindere dal modello
-        self.model = VLLMModel(self.config)
+        self.model = LangchainModel(self.config)
         self.action_parser = ActionParser(self.config)
         self.dist_generator = DistributionGenerator(self.config)
 
@@ -29,7 +29,7 @@ class LLMActionGenerator:
         cached_action = self.cache.query(abstract_state, agent_id)
 
         if cached_action is not None:
-            action_dict_from_cached = self.prompt_builder.get_action_from_list(cached_action)
+            action_dict_from_cached = self.prompt_builder.get_action_from_policy_list(cached_action)
             self.prompt_builder.update_history(agent_id, abstract_state, action_dict_from_cached)
             # qui dovrebbe restitui
             return cached_action
@@ -82,3 +82,6 @@ class LLMActionGenerator:
                     random_idx = random.randint(0, num_options - 1)
                     dist[random_idx] = 1.0
         return distributions
+    
+    def clear_cache(self):
+        self.cache.clear_cache()

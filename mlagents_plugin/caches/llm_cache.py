@@ -55,6 +55,14 @@ class LLMCache(ABC):
 
         return flat_str
     
+    def clear_cache(self):
+        self.agent_history_buffers.clear()
+
+        self.hits = 0
+        self.misses = 0
+
+        print("[LLMCache] Cache cleared")
+    
     def _add_to_history(self, agent_id: str, current_state, action):
         # state is already flatten
         if agent_id not in self.agent_history_buffers:
