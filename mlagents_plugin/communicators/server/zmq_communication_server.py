@@ -44,7 +44,7 @@ class ZMQCommunicatorServer:
 
         if data.get("type") == "init":
             self.action_generator.clear_cache()
-            return json.dumps({"response": "Already initialized"})
+            return json.dumps({"response": "OK"})
         
         elif data.get("type") == "llm_only":
             llm_action = self.action_generator.get_llm_response(data)

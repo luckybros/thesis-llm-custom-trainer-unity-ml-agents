@@ -5,16 +5,16 @@ behaviors:
       batch_size: 512
       buffer_size: 5120
       learning_rate: 0.0003
-      alpha_initial: 0.1
+      alpha_initial: 0.20
       alpha_final: 0.3
-      alpha_rate_schedule: linear
+      alpha_rate_schedule: constant
       beta: 0.02
       epsilon: 0.2
       lambd: 0.95
       num_epoch: 3
       learning_rate_schedule: constant
       communicator: zmq
-      llm_refresh_interval: 1
+      llm_refresh_interval: 10
       observation_types:
         #- name: CameraSensor
         #  type: VISUAL

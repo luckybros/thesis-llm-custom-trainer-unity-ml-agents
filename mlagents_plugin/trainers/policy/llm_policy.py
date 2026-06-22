@@ -60,7 +60,6 @@ class TorchLLMPolicy(TorchPolicy):
         Imposta la policy in modalità ghost (freezata) o learning (attiva).
         Quando frozen=True, get_action salta la chiamata all'LLM e usa solo la rete neurale.
         """
-        #logger.info(f"🧊 [GHOST DEBUG] Policy ID {id(self)} - Cambio stato frozen: da {self._is_ghost_frozen} a {frozen}")
         self._is_ghost_frozen = frozen
 
     def get_action(
@@ -86,8 +85,7 @@ class TorchLLMPolicy(TorchPolicy):
 
             llm_run_out_batch = self.llm_evaluate_batch(decision_requests, global_agent_ids, selected_indices)
 
-            for agent_id in global_agent_ids:
-                llm_run_out = llm_run_out_batch[agent_id]
+            for agent_id, llm_run_out in zip(global_agent_ids, llm_run_out_batch.values()):
 
                 if "discrete" in llm_run_out:
                     discrete_log_probs = llm_run_out["discrete"]

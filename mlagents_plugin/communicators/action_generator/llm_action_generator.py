@@ -61,7 +61,7 @@ class LLMActionGenerator:
         miss_indices = []
         miss_prompts = []
 
-        for i, (agent_id, abstracted_state) in enumerate(zip(agent_ids, abstract_states)):
+        for i, (agent_id, abstract_state) in enumerate(zip(agent_ids, abstract_states)):
             cached_action = self.cache.query(abstract_state, agent_id)
 
             if cached_action is not None:
@@ -73,6 +73,7 @@ class LLMActionGenerator:
                 prompt = self.prompt_builder.build_prompt(agent_id, abstract_state)
                 miss_prompts.append(prompt)
 
+        # print(f"miss_prompts: {miss_prompts[0]}")          
         # only one call to llm 
         if miss_prompts:
             model_outputs = self.model.call_llm_batch(miss_prompts)
@@ -86,6 +87,9 @@ class LLMActionGenerator:
                 distributions = self.dist_generator.generate_distributions(action_dict)
                 distributions = self._check_distributions(distributions)
 
+                if not action_dict:
+                    print(f"Model output not valid.")
+                    print(f"model_output: {model_output}")
                 self.prompt_builder.update_history(agent_id, abstract_state, action_dict)
                 self.cache.update(abstract_state, distributions, agent_id)
 

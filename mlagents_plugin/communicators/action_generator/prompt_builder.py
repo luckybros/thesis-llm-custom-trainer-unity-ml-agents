@@ -30,7 +30,7 @@ class PromptBuilder:
         self.task = settings.task
         self.actions = settings.actions
         self.agent_histories = {}
-        self.max_history = 3
+        self.max_history = 1
         self.actions = settings.actions
 
         self.obs_template = settings.obs_template

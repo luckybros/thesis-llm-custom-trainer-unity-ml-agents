@@ -7,12 +7,15 @@ class VLLMModel:
         self.model_name = settings.model
         self.model = LLM(
             model=self.model_name,
+            max_model_len=4096,
             trust_remote_code=True,
-            max_model_len=4096
         )
         self.sampling_params = SamplingParams(
-            temperature=0,
-            max_tokens=2048
+            temperature=0.6,
+            top_p=0.85,
+            max_tokens=2048,
+            presence_penalty=0.5,   
+            repetition_penalty=1.1,
         )
         self.DEFAULT_AGENT_ACTION = "Agent 0:\n  Move\n    Move forward\n  Turn\n    Stay\n  Shoot\n    Don't shoot"
 
@@ -52,7 +55,7 @@ class VLLMModel:
         
         messages_batch = [
             [
-                {"role": "system", "content": p["sys_msg"]},
+                {"role": "system", "content": "Reasoning: low\n\n" + p["sys_msg"]},
                 {"role": "user", "content": p["hum_msg"]}
             ]
             for p in prompts
@@ -61,6 +64,7 @@ class VLLMModel:
         outputs = self.model.chat(
             messages=messages_batch,
             sampling_params=self.sampling_params,
+            chat_template_kwargs={"reasoning_effort": "low"},
             use_tqdm=True
         )
 

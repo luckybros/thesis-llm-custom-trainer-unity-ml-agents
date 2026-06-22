@@ -20,19 +20,20 @@ def run_ml_agents(base_seed):
         "mlagents-learn", 
         "mlagents_plugin/config/Tanks/TanksMLAgentsLLMPlugin.yaml", 
         f"--run-id=Tank_DRL_LLM_Baseline_{base_seed}", 
-        "--env=mlagents_plugin/config/Tanks/TanksGameRL",
+        "--env=/home/lgiam/Documents/game_test_workspace/Tanks-Ml-Agents-environment/TanksLinux.x86_64",
         "--no-graphics"
     ]
 
+    company_path = '/home/lgiam/.config/unity3d/DefaultCompany/Tanks'
     if not os.path.exists(results_path):
-        if os.path.exists('/Users/luketto/Library/Application Support/DefaultCompany/Tanks/TankStatesLog.txt'):
-            os.remove('/Users/luketto/Library/Application Support/DefaultCompany/Tanks/TankStatesLog.txt')
+        if os.path.exists(f'{company_path}/TankStatesLog.txt'):
+            os.remove(f'{company_path}/TankStatesLog.txt')
             print("Deleted States Log")
-        if os.path.exists('/Users/luketto/Library/Application Support/DefaultCompany/Tanks/GlobalStatesLog.txt'):
-            os.remove('/Users/luketto/Library/Application Support/DefaultCompany/Tanks/GlobalStatesLog.txt')
+        if os.path.exists(f'{company_path}/GlobalStatesLog.txt'):
+            os.remove(f'{company_path}/GlobalStatesLog.txt')
             print("Deleted Global States Log")
-        if os.path.exists('/Users/luketto/Library/Application Support/DefaultCompany/Tanks/ExploredTiles.txt'):
-            os.remove(('/Users/luketto/Library/Application Support/DefaultCompany/Tanks/ExploredTiles.txt'))
+        if os.path.exists(f'{company_path}/ExploredTiles.txt'):
+            os.remove(f'{company_path}/ExploredTiles.txt')
         print(f"[SUPERVISORE] Nessuna run precedente trovata per '{base_seed}'. Inizio da zero.")
     else:
         print(f"[SUPERVISORE] Run '{base_seed}' già esistente. Aggiungo --resume.")
