@@ -19,9 +19,7 @@ class ZMQCommunicatorServer:
         self.HOST = "127.0.0.1"
         self.PORT = 65432
         self.action_generator = None
-        #self.act_gen_cls = ACTION_GENERATOR_REGISTRY[action_generator_type]
         self.config_path = config_path
-        #self.is_visual = is_visual
 
     def handle_client_logic(self, data):
         # print(type(data)) è un dict
@@ -31,14 +29,6 @@ class ZMQCommunicatorServer:
                 discrete_branches = tuple(data["discrete_branches"])
                 num_agents = data["num_agents"]
                 num_continuous_actions = data["num_continuous_actions"]
-                """
-                self.action_generator = self.act_gen_cls(
-                    discrete_branches=discrete_branches, 
-                    num_continuous_action=num_continuous_actions, 
-                    num_agents=num_agents, 
-                    settings_path=self.config_path
-            )
-                """
                 other_settings = {
                     'discrete_branches': discrete_branches,
                     'num_agents': num_agents,
@@ -63,6 +53,11 @@ class ZMQCommunicatorServer:
         elif data.get("type") == "drl_llm":
             llm_policy = self.action_generator.get_llm_policy(data)
             return llm_policy
+        
+        elif data.get("type") == "drl_llm_batch":
+            raw_states = data["items"]
+            llm_policy_batch = self.action_generator.get_llm_policy_batch(raw_states)
+            return llm_policy_batch
         
         return None
         

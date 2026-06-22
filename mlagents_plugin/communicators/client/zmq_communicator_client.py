@@ -1,3 +1,4 @@
+from typing import Any, Dict, List
 import zmq
 from mlagents_plugin.communicators.client.base_communication_client import BaseCommunicationClient
 from mlagents_plugin.utils.image_processer import ImageProcesser
@@ -35,6 +36,19 @@ class ZMQCommunicatorClient(BaseCommunicationClient):
         payload["agent_id"] = next(iter(payload['VECTORIAL']))
         payload["type"] = "drl_llm"
         self.socket.send_json(payload)
+        data = self.socket.recv_json()
+        return data
+    
+    def receive_distribution_from_llm_batch(self, obs, selected_indices: List[int]) -> Dict[str, Any]:
+        """"""
+        items = []
+        for idx in selected_indices:
+            payload = self._get_data_from_obs(obs, idx)
+            payload["agent_id"] = next(iter(payload['VECTORIAL']))
+            items.append(payload)
+
+        request = {"type": "drl_llm_batch", "items": items}
+        self.socket.send_json(request)
         data = self.socket.recv_json()
         return data
     

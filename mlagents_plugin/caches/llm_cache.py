@@ -9,7 +9,7 @@ class LLMCache(ABC):
         self.misses = 0
         self.update_print = 1
         self.agent_history_buffers: Dict[str, List[str]] = {}
-        self.history_length = 3
+        self.history_length = 1
 
     @abstractmethod
     def query(self, state) -> Optional[Dict[str, Dict[str, List[List[int]]]]]:

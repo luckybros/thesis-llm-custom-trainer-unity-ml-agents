@@ -9,7 +9,7 @@ from typing import Any, Optional, Dict, List
 class LLMHashCache(LLMCache):
 
     LOG_DIR = "cache_logs"
-    LOGGING_ENABLED = True
+    LOGGING_ENABLED = False
 
     CSV_FIELDS = [
         "timestamp",
@@ -32,9 +32,6 @@ class LLMHashCache(LLMCache):
             self._csv_files: Dict[str, Any] = {}
             self._csv_writers: Dict[str, Any] = {}
 
-    # ------------------------------------------------------------------
-    # Logging helpers
-    # ------------------------------------------------------------------
     def _csv_path(self, agent_id: str) -> str:
         safe_id = str(agent_id).replace("/", "_").replace("\\", "_")
         return os.path.join(self.LOG_DIR, f"agent_{safe_id}.csv")
@@ -78,9 +75,6 @@ class LLMHashCache(LLMCache):
         self._csv_files.clear()
         self._csv_writers.clear()
 
-    # ------------------------------------------------------------------
-    # Cache logic
-    # ------------------------------------------------------------------
     def query(self, state: dict, agent_id: str) -> Optional[Dict[str, Dict[str, List[List[int]]]]]:
         self._print_cache_state(state)
         flatten_state = self._flattening(state)
@@ -94,6 +88,7 @@ class LLMHashCache(LLMCache):
 
             self._log(agent_id, "QUERY-HIT", flatten_state, agent_history,
                        full_query, state_hash, action=action_retrieved)
+            
             self._add_to_history(agent_id, flatten_state, action_retrieved)
 
             return action_retrieved

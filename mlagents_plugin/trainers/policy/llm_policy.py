@@ -82,6 +82,20 @@ class TorchLLMPolicy(TorchPolicy):
         # The problem is that process trajectory can't have missing piece of information, so we have
         # to add empty lists when we don't call the llm
         if refresh_llm and not self._is_ghost_frozen:
+            selected_indices = list(range(len(global_agent_ids)))
+
+            llm_run_out_batch = self.llm_evaluate_batch(decision_requests, global_agent_ids, selected_indices)
+
+            for agent_id in global_agent_ids:
+                llm_run_out = llm_run_out_batch[agent_id]
+
+                if "discrete" in llm_run_out:
+                    discrete_log_probs = llm_run_out["discrete"]
+                    if agent_id not in TorchLLMPolicy.GLOBAL_LLM_BUFFERS:
+                        TorchLLMPolicy.GLOBAL_LLM_BUFFERS[agent_id] = LLMBuffer()
+                    TorchLLMPolicy.GLOBAL_LLM_BUFFERS[agent_id].add_entry(LLMBufferKey.LLM_LOG_DISCRETE_LOG_PROBS, discrete_log_probs['agent_0-0'])
+                    TorchLLMPolicy.GLOBAL_LLM_BUFFERS[agent_id].add_entry(LLMBufferKey.LLM_MASK_DISCRETE, 1)
+            """
             for agent_id in global_agent_ids:
                 selected_index = global_agent_ids.index(agent_id)
                 llm_run_out = self.llm_evaluate(decision_requests, selected_index)
@@ -91,6 +105,7 @@ class TorchLLMPolicy(TorchPolicy):
                         TorchLLMPolicy.GLOBAL_LLM_BUFFERS[agent_id] = LLMBuffer()
                     TorchLLMPolicy.GLOBAL_LLM_BUFFERS[agent_id].add_entry(LLMBufferKey.LLM_LOG_DISCRETE_LOG_PROBS, discrete_log_probs['agent_0-0'])
                     TorchLLMPolicy.GLOBAL_LLM_BUFFERS[agent_id].add_entry(LLMBufferKey.LLM_MASK_DISCRETE, 1)
+            """
 
             """
             selected_agent_id = random.choice(global_agent_ids)
@@ -163,57 +178,6 @@ class TorchLLMPolicy(TorchPolicy):
 
         return super().get_action(decision_requests, worker_id)
     
-    
-    """
-    def get_action(
-            self, decision_requests: DecisionSteps, worker_id : int
-    ) -> ActionInfo:
-        # LLM part
-        obs = decision_requests.obs
-        
-        llm_run_out = self.llm_evaluate(decision_requests)  
-
-        global_agent_ids = [
-            get_global_agent_id(worker_id, int(agent_id))
-            for agent_id in decision_requests.agent_id
-        ] 
-
-        logger.info(f"llm_run_out: {llm_run_out}")
-
-        #logger.info(f"global_agent_ids: {global_agent_ids}")
-
-        if self._llm_step_counter % self.llm_refresh_interval == 0:
-            if "discrete" in llm_run_out:
-                discrete_log_probs = llm_run_out["discrete"]
-                for agent_id, dist in discrete_log_probs.items():
-                    if agent_id not in self.agent_llm_buffers:
-                        self.agent_llm_buffers[agent_id] = LLMBuffer()
-                    # Squeeze nel caso single action, si puo fare sicuramente meglio 
-                    # dist = LLMUtils.squeeze_list_dim(batch_list=dist)
-                    self.agent_llm_buffers[agent_id].add_entry(LLMBufferKey.LLM_LOG_DISCRETE_LOG_PROBS, dist)
-                    self.agent_llm_buffers[agent_id].add_entry(LLMBufferKey.LLM_MASK_DISCRETE, 1)
-
-        else:
-            for agent_id, dist in discrete_log_probs.items():
-                if agent_id not in self.agent_llm_buffers:
-                    self.agent_llm_buffers[agent_id] = LLMBuffer()
-                self.agent_llm_buffers[agent_id].add_entry(LLMBufferKey.LLM_LOG_DISCRETE_LOG_PROBS, [])
-                self.agent_llm_buffers[agent_id].add_entry(LLMBufferKey.LLM_MASK_DISCRETE, 0)
-                self._llm_step_counter = 0
-            
-        if "continuous" in llm_run_out:
-            continuous_log_probs = llm_run_out["continuous"]
-            for agent_id, dist in continuous_log_probs.items():
-                if agent_id not in self.agent_llm_buffers:
-                    self.agent_llm_buffers[agent_id] = LLMBuffer()
-                self.agent_llm_buffers[agent_id].add_entry(LLMBufferKey.LLM_LOG_CONTINUOUS_LOG_PROBS, dist)
-                
-        self._llm_step_counter += 1
-
-        return super().get_action(decision_requests, worker_id)
-    """
-    
-
     def llm_evaluate(
             self, decision_requests: DecisionSteps, selected_index
     ) -> Dict[str, List[np.ndarray]]:
@@ -242,6 +206,42 @@ class TorchLLMPolicy(TorchPolicy):
         llm_run_out = self.communicator_client.receive_distribution_from_llm(obs, selected_index) # Dict[str, Any]
         return llm_run_out
         
+    def llm_evaluate_batch(
+            self, decision_requests: DecisionSteps, agent_ids: list, selected_indices: list
+    ) -> dict:
+        """
+        Interrogate LLM, but only one time instead of one call for agent
+
+        Ritorna: dict {agent_id: llm_run_out}, dove ogni llm_run_out ha lo
+             stesso formato che llm_evaluate ritornava per un singolo
+             agente:
+             {
+                 "discrete": {...},
+                 "continuous": {...}
+             }
+        """
+        obs = decision_requests.obs
+        num_agents = len(obs[0])
+
+        if self.num_agents is None:
+            self.num_agents = num_agents
+
+        if self.communicator_client is None:
+            self.communicator_client = self._communicator_cls(
+                discrete_branches=self.action_spec.discrete_branches,
+                num_continuous_action=self.num_continuous_action,
+                num_agents=1,
+                observation_types=self.observation_types
+            )
+
+        masks = self._extract_masks(decision_requests)
+
+        llm_run_out_batch = self.communicator_client.receive_distribution_from_llm_batch(
+            obs, selected_indices
+        )
+
+        return llm_run_out_batch
+            
     def pop_llm_buffer_data(
             self, agent_id: int, num_items: int
     ) -> Dict[LLMBufferKey, List[np.ndarray]]:

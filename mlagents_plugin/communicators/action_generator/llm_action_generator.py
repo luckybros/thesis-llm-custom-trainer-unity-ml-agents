@@ -2,8 +2,8 @@ from mlagents_plugin.communicators.action_generator.llm_settings import LLMSetti
 from mlagents_plugin.communicators.action_generator.state_abstration_module import StateAstractionModule
 from mlagents_plugin.communicators.action_generator.action_optimization_module import ActionOptimizationModule
 from mlagents_plugin.communicators.action_generator.prompt_builder import PromptBuilder
-from mlagents_plugin.communicators.action_generator.langchain_model import LangchainModel
-#from mlagents_plugin.communicators.action_generator.vllm_model import VLLMModel
+#from mlagents_plugin.communicators.action_generator.langchain_model import LangchainModel
+from mlagents_plugin.communicators.action_generator.vllm_model import VLLMModel
 from mlagents_plugin.communicators.action_generator.action_parser import ActionParser
 from mlagents_plugin.communicators.action_generator.distribution_generator import DistributionGenerator
 from mlagents_plugin.caches.hash_cache import LLMHashCache
@@ -18,7 +18,7 @@ class LLMActionGenerator:
         self.cache = LLMHashCache()
         self.action_optimization_module = ActionOptimizationModule(self.config)
         self.prompt_builder = PromptBuilder(self.config) # comune a tutti a prescindere dal modello
-        self.model = LangchainModel(self.config)
+        self.model = VLLMModel(self.config)
         self.action_parser = ActionParser(self.config)
         self.dist_generator = DistributionGenerator(self.config)
 
@@ -47,6 +47,51 @@ class LLMActionGenerator:
 
         self.cache.update(abstract_state, distributions, agent_id)
         return distributions
+    
+    def get_llm_policy_batch(self, raw_states):
+        """
+        raw_states: lista di raw_state (uno per agente), stesso step.
+        Ritorna: dict {agent_id: distributions}, stesso formato per-agente
+                 restituito da get_llm_policy, ma processato in batch.
+        """
+        agent_ids = [rs['agent_id'] for rs in raw_states]
+        abstract_states = [self.abstraction_module.discretize(rs) for rs in raw_states]
+
+        results = {}
+        miss_indices = []
+        miss_prompts = []
+
+        for i, (agent_id, abstracted_state) in enumerate(zip(agent_ids, abstract_states)):
+            cached_action = self.cache.query(abstract_state, agent_id)
+
+            if cached_action is not None:
+                action_dict_from_cached = self.prompt_builder.get_action_from_policy_list(cached_action)
+                self.prompt_builder.update_history(agent_id, abstract_state, action_dict_from_cached)
+                results[agent_id] = cached_action
+            else:
+                miss_indices.append(i)
+                prompt = self.prompt_builder.build_prompt(agent_id, abstract_state)
+                miss_prompts.append(prompt)
+
+        # only one call to llm 
+        if miss_prompts:
+            model_outputs = self.model.call_llm_batch(miss_prompts)
+
+            for idx, model_output in zip(miss_indices, model_outputs):
+                agent_id = agent_ids[idx]
+                abstract_state = abstract_states[idx]
+
+                action_dict = self.action_parser.parse_actions(model_output)
+                action_chosen = self.dist_generator.get_actions(action_dict)
+                distributions = self.dist_generator.generate_distributions(action_dict)
+                distributions = self._check_distributions(distributions)
+
+                self.prompt_builder.update_history(agent_id, abstract_state, action_dict)
+                self.cache.update(abstract_state, distributions, agent_id)
+
+                results[agent_id] = distributions
+
+        return results
     
     def get_llm_response(self, raw_state):
         print(f"raw_state: {raw_state}")
