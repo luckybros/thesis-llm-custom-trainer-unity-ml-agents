@@ -80,97 +80,36 @@ class TorchLLMPolicy(TorchPolicy):
 
         # The problem is that process trajectory can't have missing piece of information, so we have
         # to add empty lists when we don't call the llm
-        if refresh_llm and not self._is_ghost_frozen:
-            selected_indices = list(range(len(global_agent_ids)))
+        if not self._is_ghost_frozen:
+            if refresh_llm:
+                selected_indices = list(range(len(global_agent_ids)))
 
-            llm_run_out_batch = self.llm_evaluate_batch(decision_requests, global_agent_ids, selected_indices)
+                llm_run_out_batch = self.llm_evaluate_batch(decision_requests, global_agent_ids, selected_indices)
 
-            for agent_id, llm_run_out in zip(global_agent_ids, llm_run_out_batch.values()):
+                for agent_id, llm_run_out in zip(global_agent_ids, llm_run_out_batch.values()):
 
-                if "discrete" in llm_run_out:
-                    discrete_log_probs = llm_run_out["discrete"]
-                    if agent_id not in TorchLLMPolicy.GLOBAL_LLM_BUFFERS:
-                        TorchLLMPolicy.GLOBAL_LLM_BUFFERS[agent_id] = LLMBuffer()
-                    TorchLLMPolicy.GLOBAL_LLM_BUFFERS[agent_id].add_entry(LLMBufferKey.LLM_LOG_DISCRETE_LOG_PROBS, discrete_log_probs['agent_0-0'])
-                    TorchLLMPolicy.GLOBAL_LLM_BUFFERS[agent_id].add_entry(LLMBufferKey.LLM_MASK_DISCRETE, 1)
-            """
-            for agent_id in global_agent_ids:
-                selected_index = global_agent_ids.index(agent_id)
-                llm_run_out = self.llm_evaluate(decision_requests, selected_index)
-                if "discrete" in llm_run_out:
-                    discrete_log_probs = llm_run_out["discrete"]
-                    if agent_id not in TorchLLMPolicy.GLOBAL_LLM_BUFFERS:
-                        TorchLLMPolicy.GLOBAL_LLM_BUFFERS[agent_id] = LLMBuffer()
-                    TorchLLMPolicy.GLOBAL_LLM_BUFFERS[agent_id].add_entry(LLMBufferKey.LLM_LOG_DISCRETE_LOG_PROBS, discrete_log_probs['agent_0-0'])
-                    TorchLLMPolicy.GLOBAL_LLM_BUFFERS[agent_id].add_entry(LLMBufferKey.LLM_MASK_DISCRETE, 1)
-            """
-
-            """
-            selected_agent_id = random.choice(global_agent_ids)
-            selected_index = global_agent_ids.index(selected_agent_id)
-            llm_run_out = self.llm_evaluate(decision_requests, selected_index)  
-            if "discrete" in llm_run_out:
-                discrete_log_probs = llm_run_out["discrete"]
-                logger.info(f"Discrete log probs: {discrete_log_probs}")
-                for agent_id in global_agent_ids:
-                    if agent_id not in TorchLLMPolicy.GLOBAL_LLM_BUFFERS:
-                        #logger.info(f"{agent_id} not in llm_buffer, creating a new one")
-                        TorchLLMPolicy.GLOBAL_LLM_BUFFERS[agent_id] = LLMBuffer()
-                        #self.agent_llm_buffers[agent_id] = LLMBuffer()
-                    if agent_id == selected_agent_id:
-                        #logger.info(f"Adding...")
-                        #logger.info(f"agent_id: {agent_id}")
+                    if "discrete" in llm_run_out:
+                        discrete_log_probs = llm_run_out["discrete"]
+                        if agent_id not in TorchLLMPolicy.GLOBAL_LLM_BUFFERS:
+                            TorchLLMPolicy.GLOBAL_LLM_BUFFERS[agent_id] = LLMBuffer()
                         TorchLLMPolicy.GLOBAL_LLM_BUFFERS[agent_id].add_entry(LLMBufferKey.LLM_LOG_DISCRETE_LOG_PROBS, discrete_log_probs['agent_0-0'])
                         TorchLLMPolicy.GLOBAL_LLM_BUFFERS[agent_id].add_entry(LLMBufferKey.LLM_MASK_DISCRETE, 1)
-                        #self.agent_llm_buffers[agent_id].add_entry(LLMBufferKey.LLM_LOG_DISCRETE_LOG_PROBS, discrete_log_probs['agent_0-0'])
-                        #self.agent_llm_buffers[agent_id].add_entry(LLMBufferKey.LLM_MASK_DISCRETE, 1)
-                    else:
-                        TorchLLMPolicy.GLOBAL_LLM_BUFFERS[agent_id].add_entry(LLMBufferKey.LLM_LOG_DISCRETE_LOG_PROBS, [])
-                        TorchLLMPolicy.GLOBAL_LLM_BUFFERS[agent_id].add_entry(LLMBufferKey.LLM_MASK_DISCRETE, 0)   
-            """
 
-            """
-                for agent_id, dist in discrete_log_probs.items():
-                    if agent_id not in self.agent_llm_buffers:
-                        self.agent_llm_buffers[agent_id] = LLMBuffer()
-                    # Squeeze nel caso single action, si puo fare sicuramente meglio 
-                    # dist = LLMUtils.squeeze_list_dim(batch_list=dist)
-                    logger.info(f": {agent_id}")
-                    logger.info(f"Selected agent for LLM: {selected_agent_id}")
-                    if agent_id == selected_agent_id:    
-                        self.agent_llm_buffers[agent_id].add_entry(LLMBufferKey.LLM_LOG_DISCRETE_LOG_PROBS, dist)
-                        self.agent_llm_buffers[agent_id].add_entry(LLMBufferKey.LLM_MASK_DISCRETE, 1)
-                    else:
-                        self.agent_llm_buffers[agent_id].add_entry(LLMBufferKey.LLM_LOG_DISCRETE_LOG_PROBS, [])
-                        self.agent_llm_buffers[agent_id].add_entry(LLMBufferKey.LLM_MASK_DISCRETE, 0)
-            """
+                self._llm_step_counter = 0
 
-            """
-            if "continuous" in llm_run_out:
-                continuous_log_probs = llm_run_out["continuous"]
-                for agent_id, dist in continuous_log_probs.items():
+            else:
+                for agent_id in global_agent_ids:
                     if agent_id not in TorchLLMPolicy.GLOBAL_LLM_BUFFERS:
                         TorchLLMPolicy.GLOBAL_LLM_BUFFERS[agent_id] = LLMBuffer()
-                    #logger.info(f"cccc {agent_id}")
-                    TorchLLMPolicy.GLOBAL_LLM_BUFFERS[agent_id].add_entry(LLMBufferKey.LLM_LOG_CONTINUOUS_LOG_PROBS, dist)
-                    TorchLLMPolicy.GLOBAL_LLM_BUFFERS[agent_id].add_entry(LLMBufferKey.LLM_MASK_CONTINUOUS, 1)
-            """
-
-            self._llm_step_counter = 0
-
-        else:
-            for agent_id in global_agent_ids:
-                if agent_id not in TorchLLMPolicy.GLOBAL_LLM_BUFFERS:
-                    TorchLLMPolicy.GLOBAL_LLM_BUFFERS[agent_id] = LLMBuffer()
-                #logger.info(f"eeee {agent_id}")
-                # Discrete
-                if self._is_discrete > 0:
-                    TorchLLMPolicy.GLOBAL_LLM_BUFFERS[agent_id].add_entry(LLMBufferKey.LLM_LOG_DISCRETE_LOG_PROBS, [])
-                    TorchLLMPolicy.GLOBAL_LLM_BUFFERS[agent_id].add_entry(LLMBufferKey.LLM_MASK_DISCRETE, 0)
-                # Continuous
-                if self._is_continuous > 0:
-                    TorchLLMPolicy.GLOBAL_LLM_BUFFERS[agent_id].add_entry(LLMBufferKey.LLM_LOG_CONTINUOUS_LOG_PROBS, [])
-                    TorchLLMPolicy.GLOBAL_LLM_BUFFERS[agent_id].add_entry(LLMBufferKey.LLM_MASK_CONTINUOUS, 0)
+                    #logger.info(f"eeee {agent_id}")
+                    # Discrete
+                    if self._is_discrete > 0:
+                        TorchLLMPolicy.GLOBAL_LLM_BUFFERS[agent_id].add_entry(LLMBufferKey.LLM_LOG_DISCRETE_LOG_PROBS, [])
+                        TorchLLMPolicy.GLOBAL_LLM_BUFFERS[agent_id].add_entry(LLMBufferKey.LLM_MASK_DISCRETE, 0)
+                    # Continuous
+                    if self._is_continuous > 0:
+                        TorchLLMPolicy.GLOBAL_LLM_BUFFERS[agent_id].add_entry(LLMBufferKey.LLM_LOG_CONTINUOUS_LOG_PROBS, [])
+                        TorchLLMPolicy.GLOBAL_LLM_BUFFERS[agent_id].add_entry(LLMBufferKey.LLM_MASK_CONTINUOUS, 0)
                 
         self._llm_step_counter += 1
 
