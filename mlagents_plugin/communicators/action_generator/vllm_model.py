@@ -19,29 +19,6 @@ class VLLMModel:
         )
         self.DEFAULT_AGENT_ACTION = "Agent 0:\n  Move\n    Move forward\n  Turn\n    Stay\n  Shoot\n    Don't shoot"
 
-    """
-    def call_llm(self, prompt):
-        messages = [
-            {"role": "system", "content": prompt["sys_msg"]},
-            {"role": "user", "content": prompt["hum_msg"]}
-        ]
-
-        outputs = self.model.chat(
-            messages=messages,
-            sampling_params=self.sampling_params,
-            use_tqdm=False
-        )
-
-        llm_choice = outputs[0].outputs[0].text
-
-        print(f"llm choice: {llm_choice}")
-
-        if not self._is_output_valid(llm_choice):
-            return self.DEFAULT_AGENT_ACTION
-        
-        return llm_choice
-    """
-        
     def call_llm(self, prompt: Dict[str, str]) -> str:
         return self.call_llm_batch([prompt])[0]
     
@@ -84,7 +61,6 @@ class VLLMModel:
         if not output:
             return False
             
-        # Controlliamo la presenza delle tre macro-azioni necessarie
         required_keywords = ["Move", "Turn", "Shoot"]
         return all(keyword in output for keyword in required_keywords)
 

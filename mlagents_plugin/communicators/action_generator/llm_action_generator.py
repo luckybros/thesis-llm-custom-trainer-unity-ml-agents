@@ -3,6 +3,7 @@ from mlagents_plugin.communicators.action_generator.state_abstration_module impo
 from mlagents_plugin.communicators.action_generator.action_optimization_module import ActionOptimizationModule
 from mlagents_plugin.communicators.action_generator.prompt_builder import PromptBuilder
 #from mlagents_plugin.communicators.action_generator.langchain_model import LangchainModel
+from mlagents_plugin.communicators.action_generator.llamacpp_model import LlamaCppModel
 from mlagents_plugin.communicators.action_generator.vllm_model import VLLMModel
 from mlagents_plugin.communicators.action_generator.action_parser import ActionParser
 from mlagents_plugin.communicators.action_generator.distribution_generator import DistributionGenerator
@@ -21,6 +22,10 @@ class LLMActionGenerator:
         self.model = VLLMModel(self.config)
         self.action_parser = ActionParser(self.config)
         self.dist_generator = DistributionGenerator(self.config)
+
+        # numero massimo di re-interrogazioni dell'LLM quando l'output non e' parsabile.
+        # superato questo limite si usa l'azione di default per non bloccare il flusso.
+        self.max_llm_retries = getattr(self.config, "max_llm_retries", 10)
 
     def get_llm_policy(self, raw_state):
 
@@ -76,26 +81,38 @@ class LLMActionGenerator:
         # print(f"miss_prompts: {miss_prompts[0]}")          
         # only one call to llm 
         if miss_prompts:
-            model_outputs = self.model.call_llm_batch(miss_prompts)
+            pending_indices = miss_indices
+            pending_prompts = miss_prompts
 
-            for idx, model_output in zip(miss_indices, model_outputs):
-                agent_id = agent_ids[idx]
-                abstract_state = abstract_states[idx]
+            while pending_indices:
+                model_outputs = self.model.call_llm_batch(pending_prompts)
+                
+                next_indices = []
+                next_prompts = []
 
-                action_dict = self.action_parser.parse_actions(model_output)
-                action_chosen = self.dist_generator.get_actions(action_dict)
-                distributions = self.dist_generator.generate_distributions(action_dict)
-                distributions = self._check_distributions(distributions)
+                for idx, prompt, model_output in zip(pending_indices, pending_prompts, model_outputs):
+                    agent_id = agent_ids[idx]
+                    abstract_state = abstract_states[idx]
+                    action_dict = self.action_parser.parse_actions(model_output)
 
-                if not action_dict:
-                    print(f"Model output not valid.")
-                    print(f"model_output: {model_output}")
-                self.prompt_builder.update_history(agent_id, abstract_state, action_dict)
-                self.cache.update(abstract_state, distributions, agent_id)
+                    if not action_dict:
+                        print(f"Model output not valid for agent {agent_id}, retrying...")
+                        next_indices.append(idx)
+                        next_prompts.append(prompt)
+                        continue
 
-                results[agent_id] = distributions
+                    action_chosen = self.dist_generator.get_actions(action_dict)
+                    distributions = self.dist_generator.generate_distributions(action_dict)
+                    distributions = self._check_distributions(distributions)
+                    self.prompt_builder.update_history(agent_id, abstract_state, action_dict)
+                    self.cache.update(abstract_state, distributions, agent_id)
+                    results[agent_id] = distributions
+
+                pending_indices = next_indices
+                pending_prompts = next_prompts
 
         return results
+
     
     def get_llm_response(self, raw_state):
         print(f"raw_state: {raw_state}")
