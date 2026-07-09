@@ -17,10 +17,10 @@ def run_ml_agents(base_seed):
 
     results_path = os.path.join("results", f"Tank_DRL_LLM_Baseline_{base_seed}")
     base_cmd = [
-        "mlagents-learn", 
+        "~/.conda/envs/game-test/bin/mlagents-learn", 
         "mlagents_plugin/config/Tanks/TanksMLAgentsLLMPlugin.yaml", 
         f"--run-id=Tank_DRL_LLM_Baseline_{base_seed}", 
-        "--env=/home/lgiam/Documents/game_test_workspace/Tanks-Ml-Agents-environment/TanksLinux.x86_64",
+        "--env=/lustre/home/rpietrantuono/envs/game-test/Tanks-Ml-Agents-environment/TanksLinux.x86_64",
         "--no-graphics"
     ]
 
