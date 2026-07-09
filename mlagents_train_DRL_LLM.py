@@ -80,13 +80,5 @@ def run_ml_agents(base_seed):
 
 
 if __name__ == "__main__":
-    #parser = argparse.ArgumentParser()
-    #parser.add_argument("-y", "--yaml", required=True, help="Percorso del file di configurazione")
-    #parser.add_argument("-e", "--env", required=True, help="Percorso dell'eseguibile")  # facciamo solo con l'eseguibile x semplicità tanto trainiamo sempre con l'eseguibile
-    #parser.add_argument("-n", "--numenvs", type=int, help="Numero degli env in parallelo")
-    #parser.add_argument("-g", "--no-graphics", help="Se runnare senza interfaccia grafica")
-
-    #args = parser.parse_args()
-
     for current_seed in range(1, NUM_SEEDS+1):
         run_ml_agents(current_seed)

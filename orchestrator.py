@@ -2,57 +2,48 @@ import subprocess
 import time
 import sys
 
-PYTHON_SERVER = "/Users/luketto/.venv-vllm-metal/bin/python" 
+PYTHON_SERVER = "/lustre/home/rpietrantuono/.conda/envs/game-test-llm/bin/python" 
 
 SERVER_COMMAND = [
     PYTHON_SERVER, 
     "-m", "mlagents_plugin.communicators.server.zmq_communication_server",
-    "--config", "/Users/luketto/Desktop/Tesi/ML_Agents_tesi/simple_plugin/mlagents_plugin/config/Tanks/TanksLLM.yaml"
+    "--config", "/lustre/home/rpietrantuono/envs/game-test/custom-plugin/mlagents_plugin/config/Tanks/TanksLLM.yaml"
 ]
 
-MLAGENTS_ENV = "/opt/anaconda3/envs/mlagents/bin/python" 
-MLAGENTS_LEARN_COMMAND = "/opt/anaconda3/envs/mlagents/bin/mlagents-learn"
+MLAGENTS_ENV = "/lustre/home/rpietrantuono/.conda/envs/game-test/bin/python" 
 
 GAME_COMMAND = [
     MLAGENTS_ENV,
-    MLAGENTS_LEARN_COMMAND,
-    "mlagents_plugin/config/Tanks/TanksMLAgentsLLMPlugin.yaml",
-    "--run-id=ehisonopiccolo",
-    "--env=mlagents_plugin/config/Tanks/TanksGameRL",
-    "--no-graphics",
-    "--force"
+    "/lustre/home/rpietrantuono/envs/game-test/custom-plugin/mlagents_train_DRL_LLM.py"
 ]
 
 def main():
-    print("Avvio dell'Orchestratore di Tesi...")
+    print("----------[START ORCHESTRATOR]----------")
 
     server_process = None
     game_process = None
 
     try:
-        print("\n[1] Avvio del Server ZMQ Communication...")
+        print("\n[1] Avvio del Server")
         print(f"    Comando: {' '.join(SERVER_COMMAND)}")
         
         server_process = subprocess.Popen(SERVER_COMMAND)
 
-        print("    Attendere 15 secondi per l'inizializzazione del server e del modello...")
         time.sleep(15)
 
         if server_process.poll() is not None:
             print("ERRORE: Il server ZMQ si è chiuso inaspettatamente all'avvio.")
             sys.exit(1)
 
-        print("\n[2] Server pronto! Avvio dell'addestramento ML-Agents...")
-        print(f"    Comando: {' '.join(GAME_COMMAND)}")
+        print("\n[2] Server pronto, avvio dell'addestramento ML-Agents...")
+        print(f"Comando: {' '.join(GAME_COMMAND)}")
         
         game_process = subprocess.Popen(GAME_COMMAND)
 
         game_process.wait()
 
-        print("\n✅ Addestramento/Partita terminata.")
-
     except KeyboardInterrupt:
-        print("\n\n⚠️ Interruzione manuale (Ctrl+C). Hai fermato l'addestramento.")
+        print("\n\nInterruzione manuale (Ctrl+C). Hai fermato l'addestramento.")
 
     except Exception as e:
         print(f"Errore imprevisto nell'orchestratore: {e}")
@@ -64,14 +55,13 @@ def main():
             game_process.terminate()
             
         if server_process and server_process.poll() is None:
-            print("    Chiusura del Server ZMQ e liberazione della memoria...")
             server_process.terminate()
             try:
                 server_process.wait(timeout=5)
             except subprocess.TimeoutExpired:
                 server_process.kill()
                 
-        print("Tutto chiuso in sicurezza. Ciao!")
+        print("Orchestratore terminato")
 
 if __name__ == "__main__":
     main()

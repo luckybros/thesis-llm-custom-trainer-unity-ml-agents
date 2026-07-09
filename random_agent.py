@@ -8,10 +8,10 @@ from mlagents_envs.exception import UnityTimeOutException, UnityCommunicatorStop
 from torch.utils.tensorboard import SummaryWriter
 import time
 
-run_id = "Tank_Random_Baseline"
+run_id = "FPS_Random_Baseline"
 
 # --- CONFIGURATION ---
-EXPERIMENT_NAME = "Tank_Random_Baseline"
+EXPERIMENT_NAME = "FPS_Random_Baseline"
 NUM_SEEDS = 10          
 TOTAL_STEP_BUDGET = 1000000 
 summary_freq = 1000
@@ -39,10 +39,10 @@ def create_and_run_environment(base_seed, current_writer, run_count):
     side_channels = [stats_channel, oracle_channel, engine_channel]
 
     env = UnityEnvironment(
-        file_name='mlagents_plugin/config/Tanks/TanksGameRL', 
+        file_name='FPS', 
         seed=base_seed, 
         side_channels=side_channels,
-        no_graphics=True,
+        no_graphics=False,
         timeout_wait=100,
         additional_args=['-nolog'])
     env.reset()
@@ -106,12 +106,12 @@ try:
         seed_log_dir = os.path.join("results", f"{run_id}_{current_seed}")
         writer = SummaryWriter(log_dir=seed_log_dir)
 
-        if os.path.exists('/Users/luketto/Library/Application Support/DefaultCompany/Tanks/TankStatesLog.txt'):
-            os.remove('/Users/luketto/Library/Application Support/DefaultCompany/Tanks/TankStatesLog.txt')
-            print("Deleted States Log")
-        if os.path.exists('/Users/luketto/Library/Application Support/DefaultCompany/Tanks/GlobalStatesLog.txt'):
-            os.remove('/Users/luketto/Library/Application Support/DefaultCompany/Tanks/GlobalStatesLog.txt')
-            print("Deleted Global States Log")
+        #if os.path.exists('/Users/luketto/Library/Application Support/DefaultCompany/Tanks/TankStatesLog.txt'):
+        #    os.remove('/Users/luketto/Library/Application Support/DefaultCompany/Tanks/TankStatesLog.txt')
+        #    print("Deleted States Log")
+        #if os.path.exists('/Users/luketto/Library/Application Support/DefaultCompany/Tanks/GlobalStatesLog.txt'):
+        #    os.remove('/Users/luketto/Library/Application Support/DefaultCompany/Tanks/GlobalStatesLog.txt')
+        #    print("Deleted Global States Log")
     
         while global_step_count < TOTAL_STEP_BUDGET:
             try:

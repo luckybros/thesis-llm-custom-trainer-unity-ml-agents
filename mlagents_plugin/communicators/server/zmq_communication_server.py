@@ -4,14 +4,6 @@ import argparse
 import yaml
 from mlagents_plugin.communicators.action_generator.llm_action_generator import LLMActionGenerator
 
-
-"""
-ACTION_GENERATOR_REGISTRY = {
-    "mock": MockActionGenerator,
-    "lang": LangchainActionGenerator
-}
-"""
-
 class ZMQCommunicatorServer:
 
     #def __init__(self, action_generator_type: str, config_path: str):

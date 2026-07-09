@@ -1,19 +1,23 @@
-from setuptools import setup
-from mlagents.plugins import ML_AGENTS_TRAINER_TYPE
+from setuptools import setup, find_packages
+
+try:
+    from mlagents.plugins import ML_AGENTS_TRAINER_TYPE
+    ENTRY_POINTS = {
+        ML_AGENTS_TRAINER_TYPE: [
+            "llm_trainer=mlagents_plugin.trainers.trainer.llm_trainer:get_type_and_setting",
+        ]
+    }
+except ImportError:
+    ENTRY_POINTS = {}
 
 setup(
     name="mlagents_trainer_plugin",
     version="0.0.1",
-    # Example of how to add your own registration functions that will be called
-    # by mlagents-learn.
-    #
-    # Here, the get_example_stats_writer() function in mlagents_plugin_examples/example_stats_writer.py
-    # will get registered with the ML_AGENTS_STATS_WRITER plugin interface.
-    entry_points={
-        ML_AGENTS_TRAINER_TYPE: [
-            "llm_trainer=mlagents_plugin.trainers.trainer.llm_trainer:get_type_and_setting",
-        ]
-    },
-    
-    install_requires=["mlagents"]
+    packages=find_packages(),
+    entry_points=ENTRY_POINTS,
+    install_requires=[],
+    extras_requires={
+        "trainer": ["mlagents"],
+        "llm_server": ["pyzmq"]
+    }
 )

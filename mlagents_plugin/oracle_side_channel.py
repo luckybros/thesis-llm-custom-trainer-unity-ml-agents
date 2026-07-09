@@ -32,7 +32,7 @@ class OracleSideChannel(SideChannel):
         self.timeout_seconds = 100
         self.history = []
         self.history_length = 100
-        self.csv_path = f"bug_log_drl_llm_{id}.csv"
+        self.csv_path = f"bug_log_random_{id}.csv"
 
         if not os.path.exists(self.csv_path):
             with open(self.csv_path, "w", newline="") as f:
@@ -66,10 +66,11 @@ class OracleSideChannel(SideChannel):
             self.bug_detected = bug_type
 
             if oracle_name == "CRASH ORACLE":
-                print(f"[ORACLE] Errore critico da {oracle_name}. Chiusura di Unity in corso...")
-                if bug_message.startswith('DivideByZeroException') or bug_message.startswith('Exception: Projectile Explosion Crash!') or bug_message.startswith('IndexOutOfRangeException'):
+                if bug_message.startswith('DivideByZeroException') or bug_message.startswith('Exception: Projectile Explosion Crash!') or bug_message.startswith('IndexOutOfRangeException') or bug_message.startswith('NullReferenceException') or bug_message.startswith('Exception: Shoot a pickup!'):
+                    print(f"[ORACLE]: Crash reset!")
                     self.reset_environment()
                 else:
+                    print(f"[ORACLE] Errore critico da {oracle_name}. Chiusura di Unity in corso...")
                     self._kill_unity_process()
             elif oracle_name == "HANG ORACLE":
                 print(f"[ORACLE] Errore critico da {oracle_name}. Chiusura di Unity in corso...")
