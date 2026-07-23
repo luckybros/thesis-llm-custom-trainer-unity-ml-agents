@@ -5,7 +5,8 @@ class CerberusModel:
 
     def __init__(self, settings):
         self.model_name = settings.model
-        self.model = CerberusClient()
+        self.model = CerberusClient(project_dir="/lustre/home/rpietrantuono/envs/game-test/custom-plugin/cerberus_project")
+        self.DEFAULT_AGENT_ACTION = "Agent 0:\n  Move\n    Move forward\n  Turn\n    Stay\n  Shoot\n    Don't shoot"
 
     def call_llm(self, prompt: Dict[str, str]) -> str:
         return self.call_llm_batch([prompt])[0]
@@ -20,13 +21,14 @@ class CerberusModel:
         
         messages_batch = [
             [
-                {"role": "system", "content": "Reasoning: low\n\n" + p["sys_msg"]},
+                {"role": "system", "content": p["sys_msg"]},
                 {"role": "user", "content": p["hum_msg"]}
             ]
             for p in prompts
         ]
 
-        outputs = self.model.chat(
+        outputs = self.model.chat_batch(
+            "gpt-oss-20b",
             messages=messages_batch
         )
 
