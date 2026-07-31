@@ -129,6 +129,7 @@ Campi principali:
 - `actions`: definizione azioni discrete
 - `obs_template`: template testo osservazioni
 - `features`: mapping osservazioni (fondamentale)
+- `default_agent_action`: format di default nel caso in cui l'inferenza non si risolva correttamente
 
 > Nota: `history_length` e `task` possono essere presenti ma al momento sono meno rilevanti operativamente.
 
@@ -246,6 +247,19 @@ features:
         - label: FAR
           min: 0.8
           max: 1.1
+```
+
+## 5.4 Sezione `default_agent_action`
+Settare un'azione di default per l'agente in caso in cui l'inferenza non vada a buon fine
+```yaml
+default_agent_action: |
+    Agent 0:
+      Move
+        Move forward
+      Turn
+        Stay
+      Shoot
+        Don't shoot
 ```
 
 ---

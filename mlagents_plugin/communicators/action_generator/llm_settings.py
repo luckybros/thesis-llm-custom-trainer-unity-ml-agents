@@ -12,6 +12,8 @@ class LLMSettings:
         self.history_length = llm_config.get('history_length', 1)
         self.model = llm_config.get('model_name', '')
         self.task = llm_config.get('task', '')
+        self.default_agent_action = llm_config.get('default_agent_action', '')
+        self.required_keywords = []
         # self.model_constructor = MODEL_CONSTRUCTORS[self.model_name]
 
         raw_actions = llm_config.get('actions', {})
@@ -24,6 +26,7 @@ class LLMSettings:
         if 'discrete' in raw_actions:
             for item in raw_actions['discrete']:
                 name = item['name']
+                self.required_keywords.append(name)
                 self.actions["discrete"][name] = {
                     "options": item.get('options', []),
                     "description": item.get('description', '')

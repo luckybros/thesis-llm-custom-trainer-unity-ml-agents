@@ -114,7 +114,14 @@ class StateAstractionModule:
             feature_options = self.features['raycast'][sensor_name]
             #print(f"FEATURE OPTIONS: {feature_options}")
             num_tags = feature_options['num_detectable_tags']
+            num_rays = feature_options['num_rays']
             #print(f"NUM TAGS: {num_tags}")
+
+            key = next(iter(sensor_dict))
+
+            #sensor_dict[key] = sensor_dict[key][:, -num_rays*(num_tags+2):]
+
+            sensor_dict[key] = sensor_dict[key][-num_rays*(num_tags+2):]
 
             offset = num_tags + 2
             check_idx = num_tags

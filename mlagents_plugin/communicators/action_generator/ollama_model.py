@@ -10,7 +10,8 @@ class OllamaModel:
     def __init__(self, settings):
         self.model_name = settings.model
         self.model = ChatOllama(model=self.model_name)
-        self.DEFAULT_AGENT_ACTION = "Agent 0:\n  Move\n    Move forward\n  Turn\n    Stay\n  Shoot\n    Don't shoot"
+        self.required_keywords = settings.required_keywords
+        self.DEFAULT_AGENT_ACTION = settings.default_agent_action
 
     def call_llm_batch(self, prompts: List[Dict[str, str]]) -> List[str]:
         """
@@ -47,5 +48,4 @@ class OllamaModel:
             return False
             
         # Controlliamo la presenza delle tre macro-azioni necessarie
-        required_keywords = ["Move", "Turn", "Shoot"]
-        return all(keyword in output for keyword in required_keywords)
+        return all(keyword in output for keyword in self.required_keywords)

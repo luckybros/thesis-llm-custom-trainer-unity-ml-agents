@@ -81,11 +81,12 @@ class ZMQCommunicatorClient(BaseCommunicationClient):
                 agent_data = self.image_processer.process_grid_images(obs_list=agent_data, settings=observation_type)
                 agent_data = {agent_key: agent_data[0]}
             elif observation_type['type'] == 'RAYCAST':
-                if (observation_type['name'] == 'RAYCAST_FRONT'):
-                    agent_data = agent_data[:, -21*5:]
+                #if (observation_type['name'] == 'RAYCAST_FRONT'):
+                #    agent_data = agent_data[:, -21*5:]
                     #agent_data = agent_data[:, -15*5:]
-                else:
-                    agent_data = agent_data[:, -9*5:]
+                #else:
+                #    agent_data = agent_data[:, -9*5:]
+                agent_data = agent_data[:]
                 agent_data = {agent_key: agent_data[0].tolist()}
 
             else:

@@ -60,6 +60,14 @@ llm_settings:
         options: [Don't shoot, Shoot]
         description: >
           Shoot a projectile in the direction which the character is facing.
+  default_agent_action: |
+      Agent 0:
+        Move
+          Move forward
+        Turn
+          Stay
+        Shoot
+          Don't shoot
   use_visual_obs: False
   use_vectorial_obs: True
   use_grid_obs: False

@@ -4,6 +4,8 @@
 *.csv
 
 mlagents_plugin/config/logs_immagini/
+LLM_Training/
+cerberus_project/
 
 # macOS
 .DS_Store
@@ -34,3 +36,6 @@ peppedati.py
 react_agent.py
 mlagents_train.py
 mlagents_train_two.py
+mlagents_train_DRL_LLM.py
+orchestrator.py
+random_agent.py
