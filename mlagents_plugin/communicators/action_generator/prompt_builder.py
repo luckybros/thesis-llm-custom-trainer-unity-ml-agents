@@ -52,8 +52,9 @@ class PromptBuilder:
 
         human_text = (
             f"### HISTORY\n{self._format_history(agent_id)}\n\n"
-            f"### CURRENT OBSERVATIONS\n{content_text}"
         )
+        if self.use_vectorial:
+            human_text.append(f"### CURRENT OBSERVATIONS\n{content_text}")
 
         content = [{"type": "text", "text": human_text}]
        

@@ -38,12 +38,12 @@ class ImageProcesser:
         img_resized.save(buffered, format="PNG")
         return base64.b64encode(buffered.getvalue()).decode('utf-8')
     
-    def process_batch_images(self, obs_list):
+    def process_batch_images(self, obs_list, selected_index):
         """
         Prende l'intera lista di tensori e restituisce una lista di stringhe Base64.
         """
         self.step += 1
-        result = [ self.process_and_save_img(obs, agent_id=i) for i, obs in enumerate(obs_list) ]
+        result = [ self.process_and_save_img(obs, agent_id=selected_index) for i, obs in enumerate(obs_list) ]
         return result
     
     def process_grid_images(self, obs_list, settings):

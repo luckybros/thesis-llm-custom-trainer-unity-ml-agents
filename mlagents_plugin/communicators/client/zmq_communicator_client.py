@@ -75,7 +75,7 @@ class ZMQCommunicatorClient(BaseCommunicationClient):
             agent_key = f"agent-{selected_index}"
 
             if observation_type['type'] == 'VISUAL':
-                agent_data = self.image_processer.process_batch_images(agent_data)
+                agent_data = self.image_processer.process_batch_images(agent_data, selected_index)
                 agent_data = {agent_key: agent_data[0]}
             elif observation_type['type'] == 'GRID':
                 agent_data = self.image_processer.process_grid_images(obs_list=agent_data, settings=observation_type)

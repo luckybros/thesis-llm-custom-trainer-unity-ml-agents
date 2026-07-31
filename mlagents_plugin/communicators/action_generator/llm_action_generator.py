@@ -9,15 +9,18 @@ from mlagents_plugin.communicators.action_generator.ollama_model import OllamaMo
 from mlagents_plugin.communicators.action_generator.action_parser import ActionParser
 from mlagents_plugin.communicators.action_generator.distribution_generator import DistributionGenerator
 from mlagents_plugin.caches.hash_cache import LLMHashCache
+from mlagents_plugin.caches.visual_embedding_cache import VisualLLMEmbeddingCache
 #from mlagents_plugin.caches.embedding_cache import LLMEmbeddingCache
 import random
 
 class LLMActionGenerator:
-    def __init__(self, setting_path: str, other_settings: dict):
+    def __init__(self, setting_path: str, other_settings: dict, visual: bool = False):
         self.config = LLMSettings(settings_path=setting_path, other_settings=other_settings)
 
+        self.visual = visual
+
         self.abstraction_module = StateAstractionModule(self.config)
-        self.cache = LLMHashCache()
+        self.cache = self._build_cache()
         self.action_optimization_module = ActionOptimizationModule(self.config)
         self.prompt_builder = PromptBuilder(self.config) # comune a tutti a prescindere dal modello
         self.model = OllamaModel(self.config)
@@ -72,7 +75,8 @@ class LLMActionGenerator:
 
             if cached_action is not None:
                 action_dict_from_cached = self.prompt_builder.get_action_from_policy_list(cached_action)
-                self.prompt_builder.update_history(agent_id, abstract_state, action_dict_from_cached)
+                self.update_prompt_history(agent_id, abstract_state, action_dict_from_cached)
+                #self.prompt_builder.update_history(agent_id, abstract_state, action_dict_from_cached)
                 results[agent_id] = cached_action
             else:
                 miss_indices.append(i)
@@ -105,7 +109,8 @@ class LLMActionGenerator:
                     action_chosen = self.dist_generator.get_actions(action_dict)
                     distributions = self.dist_generator.generate_distributions(action_dict)
                     distributions = self._check_distributions(distributions)
-                    self.prompt_builder.update_history(agent_id, abstract_state, action_dict)
+                    self.update_prompt_history(agent_id, abstract_state, action_dict)
+                    #self.prompt_builder.update_history(agent_id, abstract_state, action_dict)
                     self.cache.update(abstract_state, distributions, agent_id)
                     results[agent_id] = distributions
 
@@ -113,8 +118,7 @@ class LLMActionGenerator:
                 pending_prompts = next_prompts
 
         return results
-
-    
+ 
     def get_llm_response(self, raw_state):
         print(f"raw_state: {raw_state}")
         agent_id = raw_state['agent_id']
@@ -152,3 +156,13 @@ class LLMActionGenerator:
     
     def clear_cache(self):
         self.cache.clear_cache()
+
+    def _build_cache(self):
+        if self.visual:
+            return VisualLLMEmbeddingCache()
+        return LLMHashCache()
+    
+    def update_prompt_history(self, agent_id, abstract_state, action_dict):
+        if self.visual:
+            return
+        self.prompt_builder.update_history(agent_id, abstract_state, action_dict)

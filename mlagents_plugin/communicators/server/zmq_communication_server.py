@@ -7,11 +7,12 @@ from mlagents_plugin.communicators.action_generator.llm_action_generator import 
 class ZMQCommunicatorServer:
 
     #def __init__(self, action_generator_type: str, config_path: str):
-    def __init__(self, config_path: str):
+    def __init__(self, config_path: str, visual: bool = False):
         self.HOST = "127.0.0.1"
         self.PORT = 65432
         self.action_generator = None
         self.config_path = config_path
+        self.visual = visual
 
     def handle_client_logic(self, data):
         # print(type(data)) è un dict
@@ -29,7 +30,8 @@ class ZMQCommunicatorServer:
 
                 self.action_generator = LLMActionGenerator(
                     setting_path=self.config_path,
-                    other_settings=other_settings
+                    other_settings=other_settings,
+                    visual=self.visual
                 )
 
             return json.dumps(payload)
@@ -59,10 +61,11 @@ def main():
     parser = argparse.ArgumentParser()
     #parser.add_argument("--actgen", type=str, choices=ACTION_GENERATOR_REGISTRY.keys(), default="mock", help="Type of action generator")
     parser.add_argument("--config", type=str, default="", help="Config file path")
+    parser.add_argument("--visual", action="store_true")
     args = parser.parse_args()
 
     #server = ZMQCommunicatorServer(action_generator_type=args.actgen, config_path=args.config)
-    server = ZMQCommunicatorServer(config_path=args.config)
+    server = ZMQCommunicatorServer(config_path=args.config, visual=args.visual)
     context = zmq.Context()
     socket = context.socket(zmq.REP)
     socket.bind(f"tcp://{server.HOST}:{server.PORT}")
