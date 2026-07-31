@@ -1,0 +1,209 @@
+llm_settings:
+  game_desc: |
+    Tanks is a simple game where tanks compete in a battle arena. Yout objective is destory
+    the other player, you can shoot and take power ups. Power Ups can help winning, since they provide
+    temporary buffs like increased speed, damage reduction, fast shooting or healing.
+  agent_role: |
+    You are the tactical combat AI piloting a Tank in a 1v1 battle arena. Your primary objective is to find, align with, and destroy the single enemy tank..
+    DO NOT write any analysis, preamble, or internal monologue.
+    Start your response DIRECTLY with "Reasoning:" and nothing else before it.
+    The entire response must be under 80 words.
+
+    COMBAT RULES:    
+    1. AIMING & SHOOTING:
+       Your cannon ONLY fires in a straight line directly FORWARD. That means that you
+       can only hit your enemy if 'TANK' is detected in 'RAYCAST_FRONT' in the 'FORWARD' direction, or
+       your shot will miss. 
+    2. MOVEMENT CONSEQUENCES:
+       - 'Move forward' and 'Move backward' change your position in space based on your current facing angle.
+       - 'Turn left' and 'Turn right' rotate your tank by a fixed angle, but you STAY IN THE SAME SPOT for the current frame.
+       - If an 'OBSTACLE' is 'IMMEDIATE' or 'CLOSE' in 'FORWARD', you MUST choose 'Move backward' or 'Turn' to avoid getting stuck. Do NOT move forward into a wall.
+
+    STRUCTURE YOUR RESPONSE:
+    You MUST structure your response in exactly this strict format. DO NOT write paragraphs. DO NOT write extra text. Limit your reasoning to exactly 3 bullet points, then output the Agent block:
+    1. [Reasoning]: You must follow this strict format and limit your reasoning to maximum 3 bullet points:
+       - Current Situation: Analyze where the enemy and obstacles are based on observations and history.
+       - Tactical Goal: Define what you need to achieve right now (e.g., evade a wall, rotate to face the enemy, or fire).
+       - Action Selection: Explain why your chosen Move, Turn, and Shoot actions fulfill that goal.
+    2. [Action]: The final strict format for the agent.
+      
+    IMPORTANT RULES:
+    1. You MUST output EXACTLY ONE choice for EACH category: Move, Turn, Shoot.
+    2. You CANNOT skip or invent choices. Use exactly the strings from the options list (e.g., 'Stay', 'Move forward'). Do not add any text or explanation after the action block.
+    
+    EXAMPLE FORMAT:
+      Reasoning:
+      - Current Situation: Enemy TANK is at SLIGHT_RIGHT at MEDIUM distance. No obstacles ahead.
+      - Tactical Goal: Rotate to center the enemy in FORWARD sight before firing.
+      - Action Selection: I will turn right to align, stay in position, and don't shoot yet.
+      Agent 0: 
+        Move
+          Stay
+        Turn
+          Turn right
+        Shoot
+          Don't shoot
+  history_length: 1
+  model_name: qwen2.5:1.5b
+  task: Choose the best action for current game state in order explore the game states and win the game.
+  actions: 
+    discrete:
+      - name: Move
+        options: [Stay, Move forward, Move backward]
+        description: >
+          Move the character forward or backward.
+      - name: Turn
+        options: [Stay, Turn right, Turn left]
+        description: >
+          Turn the direction which the character is facing.
+      - name: Shoot
+        options: [Don't shoot, Shoot]
+        description: >
+          Shoot a projectile in the direction which the character is facing.
+  use_visual_obs: False
+  use_vectorial_obs: True
+  use_grid_obs: False
+  use_raycast_obs: True
+  num_agents: 1
+  obs_template: |
+    The player is in the {pos_x} {pos_z} section of the map. It {can_shoot}, and its health is {health} while its enemy health is {enemy_health}. It has {power_up} equipped. Looking forward, it sees {RAYCAST_FRONT}. Looking backward, it sees {RAYCAST_BACK}.
+  features: 
+    vectorial:
+      pos_x:
+        type: "BUCKET"
+        indices: [0]
+        mapping:
+          - label: "FAR_LEFT"
+            min: -1.1
+            max: -0.6
+          - label: "LEFT"
+            min: -0.59
+            max: -0.2
+          - label: "CENTER_X"
+            min: -0.19
+            max: 0.2
+          - label: "RIGHT"
+            min: 0.21
+            max: 0.6
+          - label: "FAR_RIGHT"
+            min: 0.61
+            max: 1.1
+      pos_z:
+        type: "BUCKET"
+        indices: [1]
+        mapping:
+          - label: "BOTTOM"
+            min: -1.1
+            max: -0.6
+          - label: "BACK"
+            min: -0.59
+            max: -0.2
+          - label: "CENTER_Z"
+            min: -0.19
+            max: 0.2
+          - label: "FRONT"
+            min: 0.21
+            max: 0.6
+          - label: "FAR_FRONT"
+            min: 0.61
+            max: 1.1
+      can_shoot:
+        type: "BOOL"
+        indices: [2]
+        mapping:
+          0: "CANT_SHOOT"
+          1: "CAN_SHOOT"
+      health:
+        type: "BUCKET"
+        indices: [3]
+        mapping:
+          - label: "CRITICAL"
+            min: 0.0
+            max: 0.25
+          - label: "LOW"
+            min: 0.251
+            max: 0.50
+          - label: "MEDIUM"
+            min: 0.51
+            max: 0.80
+          - label: "HEALTHY"
+            min: 0.81
+            max: 1.1
+      enemy_health:
+        type: "BUCKET"
+        indices: [4]
+        mapping:
+          - label: "CRITICAL"
+            min: 0.0
+            max: 0.25
+          - label: "LOW"
+            min: 0.251
+            max: 0.50
+          - label: "MEDIUM"
+            min: 0.51
+            max: 0.80
+          - label: "HEALTHY"
+            min: 0.81
+            max: 1.1
+      power_up:
+        type: "ONE_HOT"
+        indices: [5, 6, 7, 8, 9, 10, 11]
+        mapping:
+          0: "None"
+          1: "Speed Up"
+          2: "Damage Reduction"
+          3: "Fast Shooting"
+          4: "Healing"
+          5: "Invincibility"
+          6: "Damage Multiplier"
+    raycast:
+      RAYCAST_FRONT:
+        detectable_tags:
+          0: "TANK"
+          1: "POWER UP" 
+          2: "WALL"
+        num_detectable_tags: 3
+        num_rays: 21
+        # direzioni logiche
+        direction: [
+          FAR_LEFT, LEFT, SLIGHT_LEFT, 
+          FORWARD, 
+          SLIGHT_RIGHT, RIGHT, FAR_RIGHT
+        ] # 7 direzioni logiche
+        distance:
+          - label: IMMEDIATE
+            min: 0.0
+            max: 0.2
+          - label: CLOSE
+            min: 0.2
+            max: 0.5
+          - label: MEDIUM
+            min: 0.5
+            max: 0.8
+          - label: FAR
+            min: 0.8   
+            max: 1.1
+      RAYCAST_BACK:
+        detectable_tags:
+          0: "TANK"
+          1: "POWER UP" 
+          2: "WALL"
+        num_detectable_tags: 3
+        num_rays: 9
+          # direzioni logiche
+        direction: [
+          LEFT, CENTER, RIGHT
+        ]
+        distance:
+          - label: IMMEDIATE
+            min: 0.0
+            max: 0.2
+          - label: CLOSE
+            min: 0.2
+            max: 0.5
+          - label: MEDIUM
+            min: 0.5
+            max: 0.8
+          - label: FAR
+            min: 0.8   
+            max: 1.1
