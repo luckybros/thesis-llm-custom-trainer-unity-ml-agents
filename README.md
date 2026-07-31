@@ -274,8 +274,9 @@ Apri due terminali.
 conda activate llmtrainer-server
 # avvia ollama se necessario
 # avvia server llm del progetto (comando reale repo)
-python -m mlagents_plugin.communicators.server.zmq_communication_server --config <file_di_configurazione_llm>
+python -m mlagents_plugin.communicators.server.zmq_communication_server --config <file_di_configurazione_llm> --visual
 ```
+Aggiungere visual solo per la versione con osservazioni visive (*you dont say?*)
 
 ### Terminale B — ML-Agents training
 
