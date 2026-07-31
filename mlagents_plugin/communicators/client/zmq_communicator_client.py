@@ -33,7 +33,7 @@ class ZMQCommunicatorClient(BaseCommunicationClient):
     def receive_distribution_from_llm(self, obs, selected_index):
 
         payload = self._get_data_from_obs(obs, selected_index)
-        payload["agent_id"] = next(iter(payload['VECTORIAL']))
+        payload["agent_id"] = next(iter(next(iter(payload.values()))))
         payload["type"] = "drl_llm"
         self.socket.send_json(payload)
         data = self.socket.recv_json()
@@ -44,7 +44,7 @@ class ZMQCommunicatorClient(BaseCommunicationClient):
         items = []
         for idx in selected_indices:
             payload = self._get_data_from_obs(obs, idx)
-            payload["agent_id"] = next(iter(payload['VECTORIAL']))
+            payload["agent_id"] = next(iter(next(iter(payload.values()))))
             items.append(payload)
 
         request = {"type": "drl_llm_batch", "items": items}
@@ -56,7 +56,7 @@ class ZMQCommunicatorClient(BaseCommunicationClient):
         
         payload = self._get_data_from_obs(obs, selected_index)
         payload["type"] = "llm_only"
-        payload["agent_id"] = next(iter(payload['VECTORIAL']))
+        payload["agent_id"] = next(iter(next(iter(payload.values()))))
 
         self.socket.send_json(payload)
         data = self.socket.recv_json()

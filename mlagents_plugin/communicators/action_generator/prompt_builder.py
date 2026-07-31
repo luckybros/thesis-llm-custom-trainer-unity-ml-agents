@@ -92,7 +92,7 @@ class PromptBuilder:
             self.agent_histories[agent_id] = []
 
         obs_text = self._build_obs_text(agent_id, state)
-        discrete_action = action_taken[0]['discrete']
+        discrete_action = next(iter(action_taken.values()))['discrete']
         action_str = ", ".join([f"{k}: {v}" for k, v in discrete_action.items()])
         entry = f"Obs: {obs_text.strip()} → {action_str}"
 
