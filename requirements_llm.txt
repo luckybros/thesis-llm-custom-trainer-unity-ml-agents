@@ -1,0 +1,4 @@
+pyzmq
+pyyaml
+numpy<2.0
+langchain-ollama

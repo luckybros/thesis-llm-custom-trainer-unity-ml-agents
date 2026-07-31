@@ -44,7 +44,7 @@ llm_settings:
         Shoot
           Don't shoot
   history_length: 1
-  model_name: openai/gpt-oss-20b
+  model_name: qwen2.5:1.5b
   task: Choose the best action for current game state in order explore the game states and win the game.
   actions: 
     discrete:

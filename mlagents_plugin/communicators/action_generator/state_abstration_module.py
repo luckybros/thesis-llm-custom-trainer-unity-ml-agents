@@ -147,7 +147,7 @@ class StateAstractionModule:
 
                         ray_subvect = ray_vect[start_idx : start_idx + offset]
 
-                        #print(f"ray_subvect: {ray_subvect}")
+                        # print(f"ray_subvect: {ray_subvect}")
                         # it didnt hit anything
                         if ray_subvect[check_idx] == 1:
                             continue

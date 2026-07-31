@@ -3,8 +3,9 @@ from mlagents_plugin.communicators.action_generator.state_abstration_module impo
 from mlagents_plugin.communicators.action_generator.action_optimization_module import ActionOptimizationModule
 from mlagents_plugin.communicators.action_generator.prompt_builder import PromptBuilder
 #from mlagents_plugin.communicators.action_generator.langchain_model import LangchainModel
-from mlagents_plugin.communicators.action_generator.cerberus_model import CerberusModel
-from mlagents_plugin.communicators.action_generator.vllm_model import VLLMModel
+#from mlagents_plugin.communicators.action_generator.cerberus_model import CerberusModel
+#from mlagents_plugin.communicators.action_generator.vllm_model import VLLMModel
+from mlagents_plugin.communicators.action_generator.ollama_model import OllamaModel
 from mlagents_plugin.communicators.action_generator.action_parser import ActionParser
 from mlagents_plugin.communicators.action_generator.distribution_generator import DistributionGenerator
 from mlagents_plugin.caches.hash_cache import LLMHashCache
@@ -19,7 +20,7 @@ class LLMActionGenerator:
         self.cache = LLMHashCache()
         self.action_optimization_module = ActionOptimizationModule(self.config)
         self.prompt_builder = PromptBuilder(self.config) # comune a tutti a prescindere dal modello
-        self.model = CerberusModel(self.config)
+        self.model = OllamaModel(self.config)
         self.action_parser = ActionParser(self.config)
         self.dist_generator = DistributionGenerator(self.config)
 
