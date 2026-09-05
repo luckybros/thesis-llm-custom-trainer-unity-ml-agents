@@ -35,10 +35,11 @@ class TorchLLMPolicy(TorchPolicy):
         communicator_cls: type,
         llm_refresh_interval: int,
         observation_types: list,
+        zmq_base_port: int = None,
     ):
-        
+
         super().__init__(seed, behavior_spec, network_settings, actor_cls, actor_kwargs)
-        
+
         self.action_spec = behavior_spec.action_spec
         self.num_actions = behavior_spec.action_spec.discrete_size
         self.num_continuous_action = behavior_spec.action_spec.continuous_size
@@ -54,6 +55,8 @@ class TorchLLMPolicy(TorchPolicy):
         self._llm_step_counter = 0
         self.observation_types = observation_types
         self._is_ghost_frozen: bool = False
+        self._worker_id: int = 0
+        self.zmq_base_port = zmq_base_port
 
     def set_ghost_frozen(self, frozen: bool) -> None:
         """
@@ -66,8 +69,9 @@ class TorchLLMPolicy(TorchPolicy):
             self, decision_requests: DecisionSteps, worker_id : int
     ) -> ActionInfo:
         # LLM part
+        self._worker_id = worker_id
         obs = decision_requests.obs
-                    
+
         global_agent_ids = [
             get_global_agent_id(worker_id, int(agent_id))
             for agent_id in decision_requests.agent_id
@@ -133,10 +137,12 @@ class TorchLLMPolicy(TorchPolicy):
 
         if self.communicator_client is None:
             self.communicator_client = self._communicator_cls(
-                discrete_branches=self.action_spec.discrete_branches, 
-                num_continuous_action=self.num_continuous_action, 
-                num_agents=1, 
-                observation_types=self.observation_types
+                discrete_branches=self.action_spec.discrete_branches,
+                num_continuous_action=self.num_continuous_action,
+                num_agents=1,
+                observation_types=self.observation_types,
+                worker_id=self._worker_id,
+                base_port=self.zmq_base_port,
             )
         masks = self._extract_masks(decision_requests)
 
@@ -168,7 +174,9 @@ class TorchLLMPolicy(TorchPolicy):
                 discrete_branches=self.action_spec.discrete_branches,
                 num_continuous_action=self.num_continuous_action,
                 num_agents=1,
-                observation_types=self.observation_types
+                observation_types=self.observation_types,
+                worker_id=self._worker_id,
+                base_port=self.zmq_base_port,
             )
 
         masks = self._extract_masks(decision_requests)

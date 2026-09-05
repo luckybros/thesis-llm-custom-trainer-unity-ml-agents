@@ -1,15 +1,24 @@
-import zmq 
+import zmq
 import json
 import argparse
 import yaml
+from typing import Optional
 from mlagents_plugin.communicators.action_generator.llm_action_generator import LLMActionGenerator
+from mlagents_plugin.utils.zmq_port_utils import resolve_zmq_port
 
 class ZMQCommunicatorServer:
 
     #def __init__(self, action_generator_type: str, config_path: str):
-    def __init__(self, config_path: str, visual: bool = False):
+    def __init__(
+        self,
+        config_path: str,
+        visual: bool = False,
+        worker_id: int = 0,
+        base_port: Optional[int] = None,
+        port: Optional[int] = None,
+    ):
         self.HOST = "127.0.0.1"
-        self.PORT = 65432
+        self.PORT = port if port is not None else resolve_zmq_port(worker_id=worker_id, base_port=base_port)
         self.action_generator = None
         self.config_path = config_path
         self.visual = visual
@@ -62,10 +71,28 @@ def main():
     #parser.add_argument("--actgen", type=str, choices=ACTION_GENERATOR_REGISTRY.keys(), default="mock", help="Type of action generator")
     parser.add_argument("--config", type=str, default="", help="Config file path")
     parser.add_argument("--visual", action="store_true")
+    parser.add_argument(
+        "--port", type=int, default=None,
+        help="Exact ZMQ port to bind to (overrides --base-port/--worker-id and MLAGENTS_ZMQ_BASE_PORT/MLAGENTS_WORKER_ID)",
+    )
+    parser.add_argument(
+        "--base-port", type=int, default=None,
+        help="Base ZMQ port; the actual port is base-port + worker-id (default: MLAGENTS_ZMQ_BASE_PORT env var, or an offset derived from ML-Agents' own --base-port, or 65432)",
+    )
+    parser.add_argument(
+        "--worker-id", type=int, default=None,
+        help="Worker id offset added to --base-port (default: MLAGENTS_WORKER_ID env var, or 0)",
+    )
     args = parser.parse_args()
 
     #server = ZMQCommunicatorServer(action_generator_type=args.actgen, config_path=args.config)
-    server = ZMQCommunicatorServer(config_path=args.config, visual=args.visual)
+    server = ZMQCommunicatorServer(
+        config_path=args.config,
+        visual=args.visual,
+        worker_id=args.worker_id,
+        base_port=args.base_port,
+        port=args.port,
+    )
     context = zmq.Context()
     socket = context.socket(zmq.REP)
     socket.bind(f"tcp://{server.HOST}:{server.PORT}")

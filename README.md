@@ -53,6 +53,7 @@ Nel file trainer (es. `config/tanks_llm.yaml`) imposta:
   - `constant`: alpha resta sul valore iniziale
 - `llm_refresh_interval`: ogni quanti step interrogare LLM
 - `communicator: zmq` (attualmente implementato)
+- `zmq_base_port` (opzionale): base port del canale ZMQ trainer↔server LLM. Se omesso viene risolta automaticamente a runtime — vedi [§6.1) Porte ZMQ dinamiche e run parallele](#61-porte-zmq-dinamiche-e-run-parallele).
 
 ### 4.1 Osservazioni inviate all’LLM (`observation_types`)
 
@@ -287,6 +288,78 @@ mlagents-learn <file_di_configurazione> --run-id=<run_id> --env=<path_eseguibile
 
 Se non si aggiunge il path eseguibile, semplicemente startare su Unity premendo +*Play**.
 
+---
+
+## 6.1) Porte ZMQ dinamiche e run parallele
+
+Il canale ZMQ tra il trainer (`ZMQCommunicatorClient`) e il server LLM (`ZMQCommunicatorServer`) **non usa più una porta fissa**. La porta effettiva è sempre:
+
+```
+porta = base_port + worker_id
+```
+
+risolta a runtime da [`mlagents_plugin/utils/zmq_port_utils.py`](mlagents_plugin/utils/zmq_port_utils.py), in questo ordine di priorità:
+
+1. valore esplicito (hyperparametro `zmq_base_port` nello YAML del trainer / flag `--port`, `--base-port`, `--worker-id` del server)
+2. offset derivato dal `--base-port` passato a `mlagents-learn` stesso (+60000)
+3. default fisso `65432`
+
+Il `worker_id` reale di ML-Agents (quello assegnato ad ogni ambiente quando si usa `--num-envs`) viene propagato automaticamente dal trainer al client — non serve configurarlo a mano lato client.
+
+⚠️ **Limite importante del punto 2 (derivazione automatica)**: funziona **solo lato trainer**, perché il processo `mlagents-learn` legge il proprio `--base-port` dai suoi argomenti e può quindi calcolarsi da solo un `base_port` ZMQ diverso per ogni run. Il **server LLM è un processo completamente separato**, lanciato a mano in un altro terminale: non ha alcun modo di vedere quale `--base-port` è stato passato al `mlagents-learn` corrispondente, quindi **non può replicare automaticamente la stessa derivazione**. Se non gli dici nulla, il server resta sul default `65432`, che può non coincidere con quanto calcolato dal trainer — il risultato non è nemmeno un conflitto di porta, ma un semplice mismatch: il client bussa su una porta, il server ne ascolta un'altra, e non si parlano.
+
+Per questo, se lanci più processi `mlagents-learn` indipendenti (un processo per terminale, **senza** `--num-envs` — lo scenario che si usa in pratica in questo progetto), il `worker_id` resta sempre `0` su tutti — non ti aiuta a distinguerli — e l'unico modo affidabile per evitare collisioni/mismatch è fissare esplicitamente lo **stesso** `base_port` ZMQ tra trainer e suo server (nel file di configurazione e nel comando del server), diverso da quello usato dalle altre run. Vedi sotto.
+
+### Caso 1 — una sola run, un solo processo
+Non serve fare nulla: i comandi della sezione 6) funzionano già con i default (porta `65432` su entrambi i lati).
+
+### Caso 2 — più run di `mlagents-learn` in parallelo sulla stessa macchina (un processo per terminale, senza `--num-envs`)
+
+Questo è lo scenario di utilizzo effettivo: ogni run è una coppia di processi indipendenti — un `mlagents-learn` in un terminale e il suo server LLM in un altro — e vuoi poterne lanciare più coppie insieme senza che si pestino i piedi.
+
+**Perché non basta il default.** Con `worker_id` sempre a `0`, la formula `porta = base_port + worker_id` diventa `porta = base_port`. Se non tocchi nulla, ogni run calcola `65432` e tutte collidono. L'unica leva che hai è differenziare manualmente `base_port` run per run.
+
+**Perché non basta nemmeno l'auto-derivazione dal `--base-port` di ML-Agents (punto 2 sopra).** Quella derivazione funziona solo dentro al processo `mlagents-learn`, che può leggere il proprio `--base-port` dai suoi argomenti. Il server è un processo a parte, lanciato in un altro terminale: non ha modo di sapere quale `--base-port` hai usato per il `mlagents-learn` corrispondente, quindi non può replicare lo stesso calcolo. Se ti affidi solo a questo, il trainer calcola una porta e il server ne ascolta un'altra: non è un conflitto, è un mismatch silenzioso (il client non riceve mai risposta).
+
+**La soluzione: fissa lo stesso `base_port` in due posti — il file di configurazione del trainer e il comando del server.**
+
+- **lato trainer**: non esiste un flag CLI di `mlagents-learn` per questo — è un hyperparametro del trainer plugin, quindi va scritto nel file YAML di quella run:
+  ```yaml
+  behaviors:
+    Tanks:
+      trainer_type: llm_trainer
+      hyperparameters:
+        communicator: zmq
+        zmq_base_port: 65001   # <-- un valore diverso per ogni run
+        ...
+  ```
+
+- **lato server**: come flag sulla riga di comando quando lo avvii — non serve nemmeno passare per `base_port`, puoi dare la porta esatta con `--port` (equivalente a `--base-port`, dato che qui `worker_id` è sempre `0`):
+  ```bash
+  python -m mlagents_plugin.communicators.server.zmq_communication_server --config <file_llm> --port 65001
+  ```
+
+Serve quindi **un file YAML dedicato per ogni run** (o una copia modificata ogni volta), perché il valore è scritto dentro al file di configurazione:
+
+```bash
+# Run A — file configRunA.yaml con zmq_base_port: 65001
+python -m mlagents_plugin.communicators.server.zmq_communication_server --config <file_llm> --port 65001
+mlagents-learn configRunA.yaml --run-id=runA --env=<eseguibile_A> --base-port 5005
+```
+```bash
+# Run B — file configRunB.yaml con zmq_base_port: 66000
+python -m mlagents_plugin.communicators.server.zmq_communication_server --config <file_llm> --port 66000
+mlagents-learn configRunB.yaml --run-id=runB --env=<eseguibile_B> --base-port 6005
+```
+
+Da tenere a mente:
+
+- Il valore in `zmq_base_port` (YAML) e quello in `--port`/`--base-port` (server) devono essere **identici** dentro la stessa run; **diversi** tra run diverse.
+- `--base-port` di `mlagents-learn` (canale Unity↔Python, meccanismo standard ML-Agents) è un numero indipendente da `zmq_base_port` (canale Python↔server LLM): vanno comunque differenziati entrambi run per run, ma non serve che coincidano tra loro.
+- `worker_id` non va toccato in questo scenario: resta sempre `0` di default, sia lato trainer (automatico) sia lato server (non serve passare `--worker-id`).
+
+---
+
 ## 7) Checklist anti-errori
 
 - `trainer_type` è `llm_trainer`
@@ -297,5 +370,6 @@ Se non si aggiunge il path eseguibile, semplicemente startare su Unity premendo 
 - ordine `options` coerente con Unity
 - `detectable_tags` raycast nello stesso ordine di Unity
 - modello Ollama disponibile localmente (`model_name` corretto)
+- se si eseguono più run in parallelo: stesso valore in `zmq_base_port` (YAML) e `--port`/`--base-port` (server) per la stessa run, diverso da quello delle altre run — vedi [§6.1](#61-porte-zmq-dinamiche-e-run-parallele)
 
 ---

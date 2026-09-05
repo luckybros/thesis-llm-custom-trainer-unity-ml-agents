@@ -20,12 +20,14 @@ import csv
 import atexit
 import psutil
 import json
+import re
 from datetime import datetime
 
 class OracleSideChannel(SideChannel):
 
     def __init__(self, id, step) -> None:
-        super().__init__(uuid.UUID("621f0a70-4f87-11ea-a6bf-784f4387d1f7"))
+        channel_uuid = self._to_uuid(id)
+        super().__init__(channel_uuid)
 
         #self.worker = threading.Thread(target=self._on_update, daemon=True)
         self.last_heartbeat_time = time.time()
@@ -41,6 +43,14 @@ class OracleSideChannel(SideChannel):
         self.bug_detected = "None"
         self.step = 0
         # atexit.register(self._on_python_exit)
+
+    @staticmethod
+    def _to_uuid(raw_id) -> uuid.UUID:
+        raw_str = str(raw_id)
+        try:
+            return uuid.UUID(raw_str)
+        except ValueError:
+            return uuid.uuid3(uuid.NAMESPACE_DNS, raw_str)
 
     def on_message_received(self, msg: IncomingMessage) -> None:
         """
@@ -76,8 +86,12 @@ class OracleSideChannel(SideChannel):
                 print(f"[ORACLE] Errore critico da {oracle_name}. Chiusura di Unity in corso...")
                 self.reset_environment()
             elif oracle_name == "STUCK ORACLE":
-                print(f"[STUUUUCK]")
-                self.reset_environment()
+                match = re.search(r"environment_(\d+)", bug_message)
+                if match:
+                    env_id = int(match.group(1))
+                    self.reset_environment(env_id)
+                else:
+                    self.reset_environment()
             else :
                 print(f"[ORACLE] Bug non critico da {oracle_name}. Invio comando di RESET a Unity...")
                 #self.reset_environment()
@@ -106,8 +120,11 @@ class OracleSideChannel(SideChannel):
             writer.writerow([timestamp, self.step, oracle, bug_type, clean_msg])
         print(f"[ORACLE] Bug salvato in {self.csv_path}: [{oracle}][{bug_type}]")
 
-    def reset_environment(self) -> None:
-        self.send_string("RESET")
+    def reset_environment(self, env_id = None) -> None:
+        if env_id is not None:
+            self.send_string(f"RESET:{env_id}")
+        else:
+            self.send_string("RESET")
 
     def update_history(self, num: int) -> None:
         self.history.append(num)

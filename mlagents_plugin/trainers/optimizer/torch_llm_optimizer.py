@@ -1,4 +1,4 @@
-from typing import Dict, cast
+from typing import Dict, Optional, cast
 
 import attr
 from mlagents.trainers.ppo.optimizer_torch import TorchPPOOptimizer, PPOSettings
@@ -30,6 +30,7 @@ class LLMSettings(PPOSettings):
     communicator : CommunicatorType = CommunicatorType.RANDOM
     llm_refresh_interval : int = 10
     observation_types : list = []
+    zmq_base_port : Optional[int] = None
     
 class TorchLLMOptimizer(TorchPPOOptimizer):
     def __init__(self, policy: TorchLLMPolicy, trainer_settings: TrainerSettings):

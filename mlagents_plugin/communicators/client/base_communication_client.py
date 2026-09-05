@@ -2,16 +2,18 @@ from abc import ABC, abstractmethod
 
 class BaseCommunicationClient(ABC):
     def __init__(
-            self, 
-            discrete_branches, 
-            num_continuous_action, 
-            num_agents, 
-            observation_types
+            self,
+            discrete_branches,
+            num_continuous_action,
+            num_agents,
+            observation_types,
+            worker_id: int = 0,
     ):
         self.discrete_branches = discrete_branches
         self.num_continuous_action = num_continuous_action
         self.num_agents = num_agents
         self.observation_types = observation_types
+        self.worker_id = worker_id
 
     @abstractmethod
     def receive_distribution_from_llm(self, obs):

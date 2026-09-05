@@ -1,23 +1,34 @@
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional
 import zmq
 from mlagents_plugin.communicators.client.base_communication_client import BaseCommunicationClient
 from mlagents_plugin.utils.image_processer import ImageProcesser
+from mlagents_plugin.utils.zmq_port_utils import resolve_zmq_port
 
 class ZMQCommunicatorClient(BaseCommunicationClient):
 
-    def __init__(self, discrete_branches: tuple[int], num_continuous_action: int, num_agents: int, observation_types: dict):
+    def __init__(
+        self,
+        discrete_branches: tuple[int],
+        num_continuous_action: int,
+        num_agents: int,
+        observation_types: dict,
+        worker_id: int = 0,
+        base_port: Optional[int] = None,
+        **kwargs,
+    ):
         super().__init__(
-            discrete_branches=discrete_branches, 
-            num_continuous_action=num_continuous_action, 
-            num_agents=num_agents, 
-            observation_types=observation_types
+            discrete_branches=discrete_branches,
+            num_continuous_action=num_continuous_action,
+            num_agents=num_agents,
+            observation_types=observation_types,
+            worker_id=worker_id,
         )
 
         self.image_processer = ImageProcesser()
         self.observation_types = observation_types
 
         self.HOST = "127.0.0.1"
-        self.PORT = 65432
+        self.PORT = resolve_zmq_port(worker_id=worker_id, base_port=base_port)
         self.context = zmq.Context()
         self.socket = self.context.socket(zmq.REQ)
         self.socket.connect(f"tcp://{self.HOST}:{self.PORT}")

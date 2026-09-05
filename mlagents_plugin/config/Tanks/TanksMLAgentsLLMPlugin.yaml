@@ -14,6 +14,7 @@ behaviors:
       num_epoch: 3
       learning_rate_schedule: constant
       communicator: zmq
+      zmq_base_port: 65001
       llm_refresh_interval: 10
       observation_types:
         #- name: CameraSensor

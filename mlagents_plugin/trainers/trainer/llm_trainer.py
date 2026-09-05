@@ -58,6 +58,7 @@ class LLMTrainer(PPOTrainer):
         self.observation_types = self.hyperparameters.observation_types
         #logger.info(f"observation_types = {self.observation_types}")
         self.communicator_type = self.hyperparameters.communicator
+        self.zmq_base_port = self.hyperparameters.zmq_base_port
         self.policy: TorchLLMPolicy = None
 
     def _process_trajectory(self, trajectory: Trajectory) -> None:
@@ -231,7 +232,8 @@ class LLMTrainer(PPOTrainer):
             actor_kwargs,
             communicator_cls,
             self.hyperparameters.llm_refresh_interval,
-            self.observation_types
+            self.observation_types,
+            self.zmq_base_port,
         )
         
         return policy
