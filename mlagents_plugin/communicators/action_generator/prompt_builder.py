@@ -30,7 +30,7 @@ class PromptBuilder:
         self.task = settings.task
         self.actions = settings.actions
         self.agent_histories = {}
-        self.max_history = 1
+        self.max_history = settings.history_length
         self.actions = settings.actions
 
         self.obs_template = settings.obs_template
@@ -54,7 +54,7 @@ class PromptBuilder:
             f"### HISTORY\n{self._format_history(agent_id)}\n\n"
         )
         if self.use_vectorial:
-            human_text.append(f"### CURRENT OBSERVATIONS\n{content_text}")
+            human_text += f"### CURRENT OBSERVATIONS\n{content_text}"
 
         content = [{"type": "text", "text": human_text}]
        
