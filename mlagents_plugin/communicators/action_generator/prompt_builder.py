@@ -93,6 +93,9 @@ class PromptBuilder:
             self.agent_histories[agent_id] = []
 
         obs_text = self._build_obs_text(agent_id, state)
+        if obs_text is None:
+            # nessun obs_template (es. osservazioni solo visuali): niente history testuale
+            return
         discrete_action = next(iter(action_taken.values()))['discrete']
         action_str = ", ".join([f"{k}: {v}" for k, v in discrete_action.items()])
         entry = f"Obs: {obs_text.strip()} → {action_str}"
@@ -111,7 +114,6 @@ class PromptBuilder:
         for index, (action_name, action) in enumerate(discrete_settings.items()):
             action_options = action['options']
 
-            print(f"action list: {action_list}")
             chosen_index = action_list[index]
 
             chosen_options = action_options[chosen_index]

@@ -1,12 +1,15 @@
 from typing import Dict, List
 from cerberus import CerberusClient
+import os
 
 class CerberusModel:
 
     def __init__(self, settings):
         self.model_name = settings.model
-        self.model = CerberusClient(project_dir="/lustre/home/rpietrantuono/envs/game-test/custom-plugin/cerberus_project")
-        self.DEFAULT_AGENT_ACTION = "Agent 0:\n  Move\n    Move forward\n  Turn\n    Stay\n  Shoot\n    Don't shoot"
+        base_dir = os.path.dirname(os.path.abspath(__file__))
+        project_dir = os.path.join(base_dir, "..", "..", "..", "cerberus_project")
+        self.model = CerberusClient(project_dir=project_dir)
+        self.DEFAULT_AGENT_ACTION = settings.default_agent_action
 
     def call_llm(self, prompt: Dict[str, str]) -> str:
         return self.call_llm_batch([prompt])[0]
@@ -34,7 +37,7 @@ class CerberusModel:
 
         results = []
         for out in outputs:
-            llm_choice = out.outputs[0].text
+            llm_choice = out.content
             if not self._is_output_valid(llm_choice):
                 llm_choice = self.DEFAULT_AGENT_ACTION
             results.append(llm_choice)

@@ -14,7 +14,7 @@ Questo framework collega **Unity ML-Agents** a un **LLM esterno** tramite traine
 
 - Unity (versione compatibile col progetto)
 - ML-Agents (lato Unity + lato Python)
-- Ollama (sviluppo locale)
+- [Ollama](https://ollama.com) per eseguire l'LLM in locale (es. Qwen) — vedi [§5.5](#55-llm-locale-qwen-via-ollama)
 - Conda (consigliato Miniconda)
 
 ---
@@ -34,10 +34,14 @@ Questo installa il trainer custom dalla repository corrente.
 ## 3.2 Ambiente 2: server LLM (LangChain, ecc.)
 
 ```bash
-conda create -n llmtrainer-server -y
+conda create -n llmtrainer-server python=3.10 -y
 conda activate llmtrainer-server
-pip install -r requirements-server.txt
+pip install -r requirements_llm.txt
+# solo per la versione con osservazioni visuali (cache CLIP + FAISS):
+pip install torch transformers faiss-cpu
 ```
+
+> Il server importa `torch/transformers/faiss` **solo** se lanciato con `--visual`: per la versione testuale bastano i requisiti base.
 
 ---
 
@@ -131,8 +135,11 @@ Campi principali:
 - `obs_template`: template testo osservazioni
 - `features`: mapping osservazioni (fondamentale)
 - `default_agent_action`: format di default nel caso in cui l'inferenza non si risolva correttamente
-
-> Nota: `history_length` e `task` possono essere presenti ma al momento sono meno rilevanti operativamente.
+- `history_length`: quanti passi (osservazione → azione) precedenti includere nel prompt
+- `task`: obiettivo sintetico, aggiunto al system prompt
+- `use_vectorial_obs`, `use_raycast_obs`, `use_visual_obs`, `use_grid_obs`: quali osservazioni inserire nel prompt
+- `max_llm_retries` (opzionale, default `3`): quante volte ri-interrogare l'LLM se la risposta non è parsabile; poi si usa `default_agent_action`
+- `model_kwargs` (opzionale): parametri extra passati a `ChatOllama` — vedi [§5.5](#55-llm-locale-qwen-via-ollama)
 
 ---
 
@@ -234,6 +241,7 @@ features:
         1: "POWER UP"
         2: "WALL"
       num_detectable_tags: 3
+      num_rays: 7          # numero totale di raggi del sensore (obbligatorio)
       direction: [FAR_LEFT, LEFT, SLIGHT_LEFT, FORWARD, SLIGHT_RIGHT, RIGHT, FAR_RIGHT]
       distance:
         - label: IMMEDIATE
@@ -250,6 +258,8 @@ features:
           max: 1.1
 ```
 
+> ⚠️ La cache testuale (hash) considera solo i raycast chiamati `RAYCAST_FRONT` / `RAYCAST_BACK` più le feature vettoriali: usare questi nomi in `observation_types`, altrimenti stati diversi vengono considerati uguali.
+
 ## 5.4 Sezione `default_agent_action`
 Settare un'azione di default per l'agente in caso in cui l'inferenza non vada a buon fine
 ```yaml
@@ -262,6 +272,61 @@ default_agent_action: |
       Shoot
         Don't shoot
 ```
+
+---
+
+## 5.5) LLM locale (Qwen) via Ollama
+
+Il backend LLM del server è [`OllamaModel`](mlagents_plugin/communicators/action_generator/ollama_model.py): **qualunque modello scaricato in Ollama** può essere usato cambiando solo `model_name` nello YAML `llm_settings`. Nessuna API key, nessun servizio esterno.
+
+```bash
+ollama serve                 # se non è già attivo come servizio
+ollama pull qwen2.5:7b       # solo testo
+ollama pull qwen2.5vl:7b     # testo + immagini (necessario per use_visual_obs)
+ollama list                  # il nome mostrato qui va in model_name
+```
+
+| Osservazioni | Modelli consigliati (esempi) |
+|---|---|
+| testuali (VECTORIAL / RAYCAST) | `qwen2.5:7b`, `qwen3:8b`, `mistral-small:24b`, `llama3.2` |
+| visuali (VISUAL / GRID) | `qwen2.5vl:3b` / `qwen2.5vl:7b`, `qwen3-vl:8b`, `llama3.2-vision` |
+
+Con osservazioni visuali il modello **deve** essere multimodale (vision): un modello solo testo ignora o rifiuta le immagini.
+
+```yaml
+llm_settings:
+  model_name: qwen3:8b
+  model_kwargs:              # opzionale, passato così com'è a ChatOllama
+    temperature: 0.2
+    num_ctx: 8192            # il prompt FPS/Tanks con history supera facilmente il contesto di default
+    reasoning: false         # disattiva il "thinking" di qwen3 (più veloce)
+    keep_alive: 30m          # tiene il modello in memoria tra una chiamata e l'altra
+    # base_url: http://<host-gpu>:11434   # Ollama su un'altra macchina (o variabile OLLAMA_HOST)
+  max_llm_retries: 3
+```
+
+Note:
+- Se il modello è "thinking" (qwen3, deepseek-r1) i blocchi `<think>…</think>` vengono rimossi automaticamente prima del parsing.
+- Se Ollama non risponde o va in errore, il server **non** si chiude: usa `default_agent_action` e continua.
+- La prima richiesta carica il modello in memoria e può richiedere decine di secondi: il client dell'esperimento solo-LLM usa per questo un timeout di 120 s (`--timeout-ms`).
+- Su cluster con GPU: lanciare `ollama serve` sul nodo di calcolo (es. `OLLAMA_MODELS=<cartella_condivisa> ollama serve &`) prima dell'orchestratore.
+
+## 5.6) Osservazioni visuali
+
+Per la versione visuale:
+1. Nel trainer YAML l'osservazione camera va dichiarata con **nome `VISUAL`** (il server cerca esattamente questa chiave; idem `GRID` per la grid sensor):
+   ```yaml
+   observation_types:
+     - name: VISUAL
+       type: VISUAL
+       index: 0
+   ```
+2. Nello YAML LLM: `use_visual_obs: True` e un `model_name` vision (vedi tabella sopra). Si possono combinare immagine e testo mettendo anche `use_vectorial_obs: True` con `obs_template`/`features`.
+3. Il server va lanciato con `--visual` (attiva la cache semantica CLIP + FAISS al posto della cache hash).
+4. Unity deve **renderizzare**: niente `--no-graphics`, altrimenti la camera produce immagini nere. Su server headless usare `xvfb-run -a ...`.
+5. Il client salva ogni immagine inviata in `logs_immagini/` (utile per debug): su run lunghe occupa molto spazio, svuotare la cartella o disattivarlo in [`image_processer.py`](mlagents_plugin/utils/image_processer.py).
+
+Esempi completi: [`TanksLLMVisual.yaml`](mlagents_plugin/config/Tanks/TanksLLMVisual.yaml) + [`TanksMLAgentsLLMPluginVisual.yaml`](mlagents_plugin/config/Tanks/TanksMLAgentsLLMPluginVisual.yaml), e la cartella [`examples/`](examples).
 
 ---
 
@@ -360,6 +425,35 @@ Da tenere a mente:
 
 ---
 
+## 6.2) Esperimento "solo LLM" (senza training)
+
+📘 **Guida passo-passo (build → Ollama → run sul proprio PC): [`experiments/llm_only/GUIDA.md`](experiments/llm_only/GUIDA.md)**
+
+In [`experiments/llm_only/`](experiments/llm_only) c'è un esperimento in cui **l'LLM gioca da solo**: nessuna rete, nessun `mlagents-learn`, nessun training. Ad ogni decisione le osservazioni vanno al server LLM e l'azione scelta viene eseguita direttamente in Unity. Serve anche come baseline da confrontare con PPO e PPO+LLM.
+
+- [`orchestrator.py`](experiments/llm_only/orchestrator.py): avvia il server LLM, attende che sia in ascolto, avvia l'agente e chiude tutto alla fine (anche con Ctrl+C).
+- [`llm_agent.py`](experiments/llm_only/llm_agent.py): apre la build Unity (`mlagents_envs`), invia le osservazioni al server ed esegue l'azione; logga su TensorBoard in `results/<run_id>`. Con `--inspect` stampa indici/nomi/shape delle osservazioni della build.
+- [`configs/`](experiments/llm_only/configs): `template_llm.yaml` e `template_training.yaml` (commentati, da copiare).
+
+**Due YAML** per esperimento, gli stessi della modalità DRL+LLM:
+- `--llm-config`: YAML `llm_settings` (§5), letto dal server;
+- `--training-config`: YAML trainer (§4), da cui l'agente legge solo `observation_types` ed `engine_settings` (gli altri iperparametri sono ignorati).
+
+Esempio pronto: `mlagents_plugin/config/FPS/FPSLLM.yaml` + `FPSTrainingLLM.yaml`. Se `observation_types` contiene `VISUAL`, l'orchestratore avvia il server con `--visual` e il gioco con la grafica attiva.
+
+```bash
+python experiments/llm_only/orchestrator.py \
+    --env Builds/MioGioco.exe \
+    --llm-config experiments/llm_only/configs/mio_gioco_llm.yaml \
+    --training-config experiments/llm_only/configs/mio_gioco_training.yaml \
+    --server-python <python_ambiente_server> \
+    --total-steps 2000
+```
+
+Opzioni principali: `--seed` (anche porte Unity `5400+seed` e ZMQ `65200+seed` → run parallele con seed diversi), `--env` omesso = Editor (Play), `--server-python`/`--agent-python` (interpreti dei due ambienti conda). Gli argomenti non riconosciuti passano a `llm_agent.py` (`--graphics`, `--time-scale`, `--timeout-ms`, `--clear-file`, `--oracle` per le build FPS/Tanks del laboratorio).
+
+---
+
 ## 7) Checklist anti-errori
 
 - `trainer_type` è `llm_trainer`
@@ -369,7 +463,8 @@ Da tenere a mente:
 - ordine `actions` uguale a `OnActionReceived`
 - ordine `options` coerente con Unity
 - `detectable_tags` raycast nello stesso ordine di Unity
-- modello Ollama disponibile localmente (`model_name` corretto)
+- modello Ollama disponibile localmente (`model_name` identico a `ollama list`), vision se `use_visual_obs: True`
+- osservazione camera chiamata `VISUAL` nel trainer YAML, server lanciato con `--visual`, Unity senza `--no-graphics`
 - se si eseguono più run in parallelo: stesso valore in `zmq_base_port` (YAML) e `--port`/`--base-port` (server) per la stessa run, diverso da quello delle altre run — vedi [§6.1](#61-porte-zmq-dinamiche-e-run-parallele)
 
 ---

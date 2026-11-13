@@ -27,7 +27,8 @@ class OracleSideChannel(SideChannel):
 
     def __init__(self, id, step) -> None:
         channel_uuid = self._to_uuid(id)
-        super().__init__(channel_uuid)
+        # super().__init__(channel_uuid)
+        super().__init__(uuid.UUID("621f0a70-4f87-11ea-a6bf-784f4387d1f7"))
 
         #self.worker = threading.Thread(target=self._on_update, daemon=True)
         self.last_heartbeat_time = time.time()
@@ -67,9 +68,6 @@ class OracleSideChannel(SideChannel):
             self.step = int(parts[4])
 
             # ORACLE_NAME: DAMAGE ORACLE
-            print(f"[{oracle_name}] Bug detected")
-            print(f"[{oracle_name}] Type: {bug_type}")
-            print(f"[{oracle_name}] {bug_message}")
 
             self._log_to_csv(oracle_name, bug_type, bug_message)
 
@@ -77,23 +75,26 @@ class OracleSideChannel(SideChannel):
 
             if oracle_name == "CRASH ORACLE":
                 if bug_message.startswith('DivideByZeroException') or bug_message.startswith('Exception: Projectile Explosion Crash!') or bug_message.startswith('IndexOutOfRangeException') or bug_message.startswith('NullReferenceException') or bug_message.startswith('Exception: Shoot a pickup!'):
-                    print(f"[ORACLE]: Crash reset!")
+                    print(f"[{oracle_name}] Bug detected")
+                    print(f"[{oracle_name}] Type: {bug_type}")
+                    print(f"[{oracle_name}] {bug_message}")
                     self.reset_environment()
                 else:
-                    print(f"[ORACLE] Errore critico da {oracle_name}. Chiusura di Unity in corso...")
                     self._kill_unity_process()
             elif oracle_name == "HANG ORACLE":
-                print(f"[ORACLE] Errore critico da {oracle_name}. Chiusura di Unity in corso...")
                 self.reset_environment()
             elif oracle_name == "STUCK ORACLE":
                 match = re.search(r"environment_(\d+)", bug_message)
                 if match:
+                    print(f"[{oracle_name}] Bug detected")
+                    print(f"[{oracle_name}] Type: {bug_type}")
+                    print(f"[{oracle_name}] {bug_message}")
                     env_id = int(match.group(1))
+                    print(f"[INFO] Stuck log message: {bug_message}\n[INFO] Environment: {env_id}")   
                     self.reset_environment(env_id)
                 else:
                     self.reset_environment()
-            else :
-                print(f"[ORACLE] Bug non critico da {oracle_name}. Invio comando di RESET a Unity...")
+            #else :
                 #self.reset_environment()
 
         
@@ -118,7 +119,6 @@ class OracleSideChannel(SideChannel):
         with open(self.csv_path, "a", newline="") as f:
             writer = csv.writer(f, delimiter=',', quoting=csv.QUOTE_MINIMAL)
             writer.writerow([timestamp, self.step, oracle, bug_type, clean_msg])
-        print(f"[ORACLE] Bug salvato in {self.csv_path}: [{oracle}][{bug_type}]")
 
     def reset_environment(self, env_id = None) -> None:
         if env_id is not None:
@@ -139,7 +139,6 @@ class OracleSideChannel(SideChannel):
     def _on_update(self) -> None:
         """Thread that monitors hearbeat for hang detection"""
         self.last_heartbeat_time = time.time()
-        print(f"[HANG ORACLE] Monitoring started...")
         while True:
             # Hang oracle
             if time.time() - self.last_heartbeat_time > self.timeout_seconds:
@@ -161,9 +160,9 @@ class OracleSideChannel(SideChannel):
             time.sleep(0.01)
 
     def save_hang_bug(self) -> None:
-        print(f"[HANG ORACLE] ERROR! Unity does not respond")
-        print(f"[HANG ORACLE] Detected possible hang")
-        print(f"[HANG ORACLE] History: {self.history} ")
+#        print(f"[HANG ORACLE] ERROR! Unity does not respond")
+#        print(f"[HANG ORACLE] Detected possible hang")
+#        print(f"[HANG ORACLE] History: {self.history} ")
         self._log_to_csv("HANG ORACLE", "hang", "Not recieved ping for timeout seconds")
 
         self.bug_detected = "hang"
@@ -189,7 +188,6 @@ class OracleSideChannel(SideChannel):
                     # Cerca lo step per il tuo comportamento (presumibilmente "Tanks")
                     for behavior, info in data.items():
                         if "step" in info:
-                            print(f"[ORACLE] Resume rilevato. Partiamo dallo step globale: {info['step']}")
                             return int(info["step"])
             except Exception as e:
                 print(f"[ORACLE] Errore lettura training_status.json: {e}")
@@ -204,16 +202,13 @@ class OracleSideChannel(SideChannel):
             children = current_process.children(recursive=True)
                 
             if not children:
-                print("[ORACLE] No Unity child processes found.")
                 return
 
             for child in children:
                 # Verifichiamo che sia l'eseguibile del gioco (puoi filtrare per nome se vuoi)
-                print(f"[ORACLE] Terminating child process: {child.name()} (PID: {child.pid})")
                 child.kill() # Prova una chiusura gentile
                 # child.kill() # Usa questo se terminate() non bastasse
                     
-            print("[ORACLE] Unity killed. ML-Agents should now save and exit.")
                 
         except Exception as e:
             print(f"[ORACLE] Error while killing Unity: {e}")

@@ -3,13 +3,13 @@ from typing import Any, Optional, Dict, List
 
 class LLMCache(ABC):
 
-    def __init__(self):
+    def __init__(self, history_length: int = 1):
         #self.cache: List[Any] = []
         self.hits = 0
         self.misses = 0
         self.update_print = 1
         self.agent_history_buffers: Dict[str, List[str]] = {}
-        self.history_length = 1
+        self.history_length = history_length
 
     @abstractmethod
     def query(self, state) -> Optional[Dict[str, Dict[str, List[List[int]]]]]:

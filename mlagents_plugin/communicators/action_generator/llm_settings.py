@@ -13,6 +13,10 @@ class LLMSettings:
         self.model = llm_config.get('model_name', '')
         self.task = llm_config.get('task', '')
         self.default_agent_action = llm_config.get('default_agent_action', '')
+        # quante volte ri-interrogare l'LLM se l'output non e' parsabile (poi default_agent_action)
+        self.max_llm_retries = int(llm_config.get('max_llm_retries', 3))
+        # parametri extra passati a ChatOllama (temperature, base_url, num_ctx, reasoning, keep_alive, ...)
+        self.model_kwargs = llm_config.get('model_kwargs', {}) or {}
         self.required_keywords = []
         # self.model_constructor = MODEL_CONSTRUCTORS[self.model_name]
 
@@ -55,7 +59,7 @@ class LLMSettings:
         self.discrete_branches = other_settings['discrete_branches']
         self.num_continuous_actions = other_settings['num_continuous_actions']
 
-        self.features = llm_config.get('features', False)
+        self.features = llm_config.get('features', {}) or {}
         self.obs_template = llm_config.get('obs_template', False)
 
         self.raycast_keys = list((self.features.get("raycast") or {}).keys())

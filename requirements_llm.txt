@@ -1,4 +1,10 @@
 pyzmq
 pyyaml
 numpy<2.0
+pillow
+langchain-core
 langchain-ollama
+# Solo per la versione visuale (server avviato con --visual):
+# torch
+# transformers
+# faiss-cpu

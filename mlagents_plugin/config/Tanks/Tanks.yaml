@@ -25,9 +25,9 @@ behaviors:
         encoding_size: 64
         learning_rate: 0.0001
     keep_checkpoints: 1
-    max_steps: 1000000 
+    max_steps: 500000 
     time_horizon: 256 #1000 #64
-    summary_freq: 1000 # default a 10000
+    summary_freq: 100000 # default a 10000
     threaded: false # a self play consigliano di levarlo 
     checkpoint_interval: 50000
     self_play:

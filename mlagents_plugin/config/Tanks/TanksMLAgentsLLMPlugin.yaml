@@ -17,28 +17,6 @@ behaviors:
       zmq_base_port: 65001
       llm_refresh_interval: 10
       observation_types:
-        #- name: CameraSensor
-        #  type: VISUAL
-        #  index: 0
-        #- name: GridSensor
-        #  type: GRID
-        #  index: 1
-        #  height: 30
-        #  width: 30
-        #  background_color: [0, 0, 0]
-        #  tags:
-        #    - name: Tank
-        #      index: 0
-        #      color: [220, 20, 60] # red
-        #    - name: PowerUp
-        #      index: 1
-        #      color: [0, 255, 255] # light blue
-        #    - name: Wall
-        #      index: 2
-        #      color: [128, 128, 128] # gray
-        #    - name: Tank
-        #      index: 3
-        #      color: [148, 0, 211] # purple
         - name: RAYCAST_FRONT
           type: RAYCAST
           index: 0
@@ -64,14 +42,14 @@ behaviors:
         learning_rate: 0.0001
     keep_checkpoints: 1
     max_steps: 500000
-    time_horizon: 256 #1000 #64
+    time_horizon: 256 
     summary_freq: 1000
     threaded: false
     checkpoint_interval: 50000
     self_play:
-      save_steps: 50000 # 50000
-      team_change: 200000 # 200000
-      swap_steps: 2000 # 2000
+      save_steps: 50000
+      team_change: 200000
+      swap_steps: 2000
       window: 10
       play_against_latest_model_ratio: 0.5
       initial_elo: 1200.0

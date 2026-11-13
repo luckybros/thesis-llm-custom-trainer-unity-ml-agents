@@ -52,7 +52,12 @@ class ZMQCommunicatorServer:
         elif data.get("type") == "llm_only":
             llm_action = self.action_generator.get_llm_response(data)
             return llm_action
-        
+
+        elif data.get("type") == "llm_only_batch":
+            raw_states = data["items"]
+            llm_action_batch = self.action_generator.get_llm_response_batch(raw_states)
+            return llm_action_batch
+
         elif data.get("type") == "drl_llm":
             llm_policy = self.action_generator.get_llm_policy(data)
             return llm_policy

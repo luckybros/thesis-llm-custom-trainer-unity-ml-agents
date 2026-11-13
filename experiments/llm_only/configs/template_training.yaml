@@ -1,0 +1,44 @@
+# =============================================================================
+# TEMPLATE YAML TRAINING (letto da llm_agent.py): quali osservazioni inviare all'LLM
+# Copia questo file (es. configs/mio_gioco_training.yaml) e adattalo al tuo gioco.
+# Va in coppia con template_llm.yaml.
+#
+# E' lo stesso formato del trainer `llm_trainer` di mlagents-learn: nell'esperimento
+# solo-LLM vengono letti SOLO observation_types ed engine_settings; gli altri
+# iperparametri sono ignorati, ma tenendoli il file e' gia' pronto per il training DRL+LLM.
+# =============================================================================
+behaviors:
+  Player:                          # nome del Behavior (Behavior Parameters in Unity)
+    trainer_type: llm_trainer
+    hyperparameters:
+      # index = posizione dell'osservazione nella build: ricavala con
+      #   python experiments/llm_only/llm_agent.py --env <build> --inspect
+      # name  = chiave usata nello YAML LLM (obs_template / features);
+      #         VISUAL e GRID devono chiamarsi proprio cosi'
+      observation_types:
+        - name: RAYCAST_FRONT
+          type: RAYCAST
+          index: 0
+        - name: VECTORIAL
+          type: VECTORIAL
+          index: 1
+        # Versione visuale: aggiungi la camera e metti use_visual_obs: True nello YAML LLM
+        # - name: VISUAL
+        #   type: VISUAL
+        #   index: 2
+
+      # --- usati solo dal training DRL+LLM (mlagents-learn), ignorati qui ---
+      communicator: zmq
+      llm_refresh_interval: 10
+      alpha_initial: 0.05
+      alpha_final: 0.4
+      alpha_rate_schedule: linear
+      batch_size: 512
+      buffer_size: 5120
+      learning_rate: 0.0003
+    max_steps: 500000
+
+# Opzionale: velocita' della simulazione
+engine_settings:
+  time_scale: 20
+  capture_frame_rate: 60

@@ -1,10 +1,20 @@
+import logging
 from typing import Any, Dict, List, Optional
 import zmq
 from mlagents_plugin.communicators.client.base_communication_client import BaseCommunicationClient
 from mlagents_plugin.utils.image_processer import ImageProcesser
 from mlagents_plugin.utils.zmq_port_utils import resolve_zmq_port
 
+logger = logging.getLogger(__name__)
+
 class ZMQCommunicatorClient(BaseCommunicationClient):
+
+    # Default timeout (ms) for a single request/response round-trip with the LLM server.
+    # Without this, a REQ socket has an infinite RCVTIMEO: if the server hangs, crashes,
+    # or is unreachable (much more likely with a remote/network LLM backend than with a
+    # local one), this call blocks forever inside Academy.EnvironmentStep(), freezing the
+    # whole synchronous training loop (all parallel environments) with no way to recover.
+    DEFAULT_TIMEOUT_MS = 30000
 
     def __init__(
         self,
@@ -14,6 +24,7 @@ class ZMQCommunicatorClient(BaseCommunicationClient):
         observation_types: dict,
         worker_id: int = 0,
         base_port: Optional[int] = None,
+        timeout_ms: int = DEFAULT_TIMEOUT_MS,
         **kwargs,
     ):
         super().__init__(
@@ -29,27 +40,67 @@ class ZMQCommunicatorClient(BaseCommunicationClient):
 
         self.HOST = "127.0.0.1"
         self.PORT = resolve_zmq_port(worker_id=worker_id, base_port=base_port)
+        self.timeout_ms = timeout_ms
         self.context = zmq.Context()
-        self.socket = self.context.socket(zmq.REQ)
-        self.socket.connect(f"tcp://{self.HOST}:{self.PORT}")
-        payload = {
+        self.socket = self._open_socket()
+
+        init_payload = {
             "type": "init",
             "discrete_branches": discrete_branches,
             "num_continuous_actions": num_continuous_action,
             "num_agents": num_agents
         }
-        self.socket.send_json(payload)
-        self.socket.recv_json()
+        self._request(init_payload)
+
+    def _open_socket(self):
+        socket = self.context.socket(zmq.REQ)
+        socket.setsockopt(zmq.RCVTIMEO, self.timeout_ms)
+        socket.setsockopt(zmq.SNDTIMEO, self.timeout_ms)
+        # Don't linger on close: a socket stuck mid-request shouldn't block process exit
+        # or the reconnect below.
+        socket.setsockopt(zmq.LINGER, 0)
+        socket.connect(f"tcp://{self.HOST}:{self.PORT}")
+        return socket
+
+    def _request(self, payload: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Send one request and wait for the reply, bounded by self.timeout_ms.
+
+        A REQ socket must alternate send/recv strictly; if recv times out, the socket
+        is left in a state where it can't send again, so on any failure we close and
+        recreate it. Returns {} (never raises) so a slow/dead LLM server degrades to
+        "no LLM signal this step" instead of hanging the whole training process.
+        """
+        try:
+            self.socket.send_json(payload)
+            return self.socket.recv_json()
+        except zmq.error.Again:
+            logger.warning(
+                "[ZMQCommunicatorClient] LLM server did not respond within %dms "
+                "(tcp://%s:%d) - dropping this request and reconnecting.",
+                self.timeout_ms, self.HOST, self.PORT
+            )
+        except zmq.error.ZMQError as e:
+            logger.warning(
+                "[ZMQCommunicatorClient] ZMQ error talking to LLM server (tcp://%s:%d): %s "
+                "- reconnecting.",
+                self.HOST, self.PORT, e
+            )
+
+        try:
+            self.socket.close(linger=0)
+        except zmq.error.ZMQError:
+            pass
+        self.socket = self._open_socket()
+        return {}
 
     def receive_distribution_from_llm(self, obs, selected_index):
 
         payload = self._get_data_from_obs(obs, selected_index)
         payload["agent_id"] = next(iter(next(iter(payload.values()))))
         payload["type"] = "drl_llm"
-        self.socket.send_json(payload)
-        data = self.socket.recv_json()
-        return data
-    
+        return self._request(payload)
+
     def receive_distribution_from_llm_batch(self, obs, selected_indices: List[int]) -> Dict[str, Any]:
         """"""
         items = []
@@ -59,19 +110,26 @@ class ZMQCommunicatorClient(BaseCommunicationClient):
             items.append(payload)
 
         request = {"type": "drl_llm_batch", "items": items}
-        self.socket.send_json(request)
-        data = self.socket.recv_json()
-        return data
-    
+        return self._request(request)
+
     def receive_action_from_llm(self, obs, selected_index):
-        
+
         payload = self._get_data_from_obs(obs, selected_index)
         payload["type"] = "llm_only"
         payload["agent_id"] = next(iter(next(iter(payload.values()))))
 
-        self.socket.send_json(payload)
-        data = self.socket.recv_json()
-        return data
+        return self._request(payload)
+
+    def receive_action_from_llm_batch(self, obs, selected_indices: List[int]) -> Dict[str, Any]:
+        """"""
+        items = []
+        for idx in selected_indices:
+            payload = self._get_data_from_obs(obs, idx)
+            payload["agent_id"] = next(iter(next(iter(payload.values()))))
+            items.append(payload)
+
+        request = {"type": "llm_only_batch", "items": items}
+        return self._request(request)
 
     def _get_data_from_obs(self, obs, selected_index):
         

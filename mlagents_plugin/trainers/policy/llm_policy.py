@@ -88,16 +88,38 @@ class TorchLLMPolicy(TorchPolicy):
             if refresh_llm:
                 selected_indices = list(range(len(global_agent_ids)))
 
+                # llm_run_out_batch can come back {} (missing entries for some/all agents)
+                # if the LLM server didn't answer in time - see ZMQCommunicatorClient._request.
+                # Every agent still needs exactly one buffer entry per step (the non-refresh
+                # branch below always adds one), so a missing/failed response must fall back
+                # to the same mask=0 "no LLM signal" entry instead of silently adding nothing,
+                # which would desync the buffer from the trajectory length.
+                #
+                # The server keys its response by "agent-{position}" (see
+                # ZMQCommunicatorClient._get_data_from_obs / ZMQCommunicatorServer), matching
+                # the position in selected_indices - not by our global_agent_id - so look it
+                # up positionally rather than assuming dict iteration order lines up (which
+                # silently breaks whenever the server's retry loop reorders results).
                 llm_run_out_batch = self.llm_evaluate_batch(decision_requests, global_agent_ids, selected_indices)
 
-                for agent_id, llm_run_out in zip(global_agent_ids, llm_run_out_batch.values()):
+                for position, agent_id in enumerate(global_agent_ids):
+                    if agent_id not in TorchLLMPolicy.GLOBAL_LLM_BUFFERS:
+                        TorchLLMPolicy.GLOBAL_LLM_BUFFERS[agent_id] = LLMBuffer()
 
-                    if "discrete" in llm_run_out:
+                    llm_run_out = llm_run_out_batch.get(f"agent-{selected_indices[position]}")
+
+                    if llm_run_out and "discrete" in llm_run_out:
                         discrete_log_probs = llm_run_out["discrete"]
-                        if agent_id not in TorchLLMPolicy.GLOBAL_LLM_BUFFERS:
-                            TorchLLMPolicy.GLOBAL_LLM_BUFFERS[agent_id] = LLMBuffer()
                         TorchLLMPolicy.GLOBAL_LLM_BUFFERS[agent_id].add_entry(LLMBufferKey.LLM_LOG_DISCRETE_LOG_PROBS, discrete_log_probs['agent_0-0'])
                         TorchLLMPolicy.GLOBAL_LLM_BUFFERS[agent_id].add_entry(LLMBufferKey.LLM_MASK_DISCRETE, 1)
+                    else:
+                        if llm_run_out is None:
+                            logger.warning(
+                                "[TorchLLMPolicy] No LLM response for agent %s this refresh step "
+                                "(server timeout or error) - using mask=0 fallback.", agent_id
+                            )
+                        TorchLLMPolicy.GLOBAL_LLM_BUFFERS[agent_id].add_entry(LLMBufferKey.LLM_LOG_DISCRETE_LOG_PROBS, [])
+                        TorchLLMPolicy.GLOBAL_LLM_BUFFERS[agent_id].add_entry(LLMBufferKey.LLM_MASK_DISCRETE, 0)
 
                 self._llm_step_counter = 0
 

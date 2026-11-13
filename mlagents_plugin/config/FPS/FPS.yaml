@@ -37,3 +37,9 @@ env_settings:
     - debug_unity.log
   max_lifetime_restarts: 0
   timeout_wait: 100
+engine_settings:
+  # Player movement runs in Update (one move per frame), decisions every 0.1s of game time (DecisionPeriod 5 x 0.02s).
+  # Frame length = time_scale / capture_frame_rate = 20/200 = 0.1s -> exactly one decision per frame
+  # (12 deg turn / 1.3 m per decision). With the default 60 a frame lasts 0.33s and 2 decisions out of 3 are overwritten.
+  time_scale: 20
+  capture_frame_rate: 200

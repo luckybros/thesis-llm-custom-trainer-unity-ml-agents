@@ -4,7 +4,7 @@ from mlagents_plugin.communicators.client.base_communication_client import BaseC
 
 class RandomCommunicationClient(BaseCommunicationClient):
 
-    def __init__(self, discrete_branches: tuple[int], num_continuous_action: int, num_agents: int, is_visual : bool):
+    def __init__(self, discrete_branches: tuple[int], num_continuous_action: int, num_agents: int, is_visual: bool = None, **kwargs):
         #super().__init__(discrete_branches=discrete_branches, num_continuous_action=num_continuous_action, num_agents=num_agents, is_visual=is_visual)
         #self.communicator = MockActionGenerator(discrete_branches=discrete_branches, num_continuous_action=num_continuous_action, num_agents=num_agents)
         pass

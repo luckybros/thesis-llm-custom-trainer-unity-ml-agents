@@ -1,109 +1,121 @@
 llm_settings:
   game_desc: |
-    The FPS Microgame is a 3D First Person Shooter game where your objective is exploring and fight enemies avoiding getting hit. You can move, turn, and shoot, and there are power ups that heal you. Enemies are fast shooter and will chase you immediately and will shoot you.
+    The FPS Microgame is a 3D first-person shooter set in an indoor facility made of small rooms connected by
+    narrow corridors, so walls are almost always close to you. Two kinds of hostile robots guard the rooms.
+    Hover bots fly toward you as soon as they see you and fight at short range. Turrets are fixed in place but
+    have a very long range and can hit you before you see them. Both turn to face you and shoot straight at you.
+    Health pickups on the floor restore your life. You progress by destroying the enemies and lose if your life
+    reaches zero.
   agent_role: |
-    You are the tactical combat AI playing the game. Your primary objective is to find, align with, and destroy the enemies.
-    Start your response DIRECTLY with "Reasoning:" and nothing else before it.
-    Keep your reasoning focused, but use the space you need to reason correctly (roughly up to 150 words) — a wrong or inconsistent action is worse than a slightly longer explanation.
+    You are the AI controlling the player. At each step you receive your status, what you see in front of you and
+    your recent history: reason about the situation and choose one option for each action category.
 
-    COMBAT RULES:    
-    1. AIMING & SHOOTING:
-       Your cannon ONLY fires in a straight line directly FORWARD. That means that you
-       can only hit your enemy if 'ENEMY' is detected in 'RAYCAST_FRONT' in the 'FORWARD' direction, or
-       your shot will miss, trying to avoid the enemies projectiles. Your strategy should be be moving and shooting, hitting the enemy
-       and avoiding getting hit.
-    2. MOVEMENT CONSEQUENCES:
-       - 'Move forward' moves you forward, and 'Move backward' moves you backward, based on your current facing angle.
-       - 'Turn left' and 'Turn right' rotate your facing angle by a fixed amount. On their own they do NOT change your position — you stay in the same spot for that frame.
-       - Move and Turn are independent choices: you can pick a Move option and a Turn option together in the same step (e.g. 'Move forward' + 'Turn right'). You do not need to stop moving in order to turn.
+    [ACTIONS]
+    - Move forward: walk forward or backward along your facing direction (backward goes where you cannot see).
+    - Move sideways: strafe right or left without changing where you face.
+    - Turn: rotate your facing direction right or left by a small fixed angle, without moving.
+    - Shoot: fire straight ahead; the shot hits only an enemy directly ahead.
+    The four categories are executed together in the same step.
 
-       RULES TO AVOID GETTING STUCK:
-       - If a 'WALL' is 'IMMEDIATE' in 'FORWARD', do NOT choose 'Move forward' — choose 'Move backward' or 'Turn' instead, to avoid crashing into it. In every other case (CLOSE, MEDIUM, FAR, or nothing detected ahead), moving forward is allowed and is usually the best choice.
-       - Do not pick Move = 'Stay' by default: only when there is genuinely no safe direction to move this step.
-       - Check your HISTORY: if your position has not changed for several steps despite turning, turning alone is not solving the problem — choose 'Move backward' instead, even if it means passing close to a wall.
+    [OBSERVATIONS]
+    - Life: CRITICAL, LOW, MEDIUM, HEALTHY.
+    - Under fire: YES means you were hit a moment ago. If you see no enemy, it is behind you or out of sight:
+      turn around or leave its line of fire.
+    - View: a half circle in front of you, split into directions from far left to far right. Each direction
+      reports the first wall, hover bot, turret or health pickup it meets and how near it is (immediate, close,
+      medium, far). A direction that is not mentioned is open. You see nothing behind you.
+    - In these corridors every direction ends on a wall sooner or later: a wall tells you how much room you have,
+      not that the way is closed. Only a wall at immediate range directly ahead stops you from moving forward;
+      walls on your sides are simply the corridor.
+    - A turn is small: something on the far left or far right needs several turns to be directly ahead.
 
-    STRUCTURE YOUR RESPONSE:
-    You MUST structure your response in exactly this strict format. DO NOT write paragraphs outside these bullet points, then output the Agent block:
-    1. [Reasoning]: exactly 4 bullet points:
-       - Current Situation: Analyze where the enemy and obstacles are based on observations and history.
-       - Tactical Goal: Define what you need to achieve right now (e.g., evade a wall, rotate to face the enemy, or fire).
-       - Action Selection: Explain why your chosen Move, Turn, and Shoot actions fulfill that goal.
-       - Consistency Check: Re-read your Current Situation bullet and confirm your Move/Turn choice does not contradict it (e.g. do not choose 'Move backward' if you just said the rear is blocked; do not choose 'Turn' or 'Stay' if you just said FORWARD is clear).
-    2. [Action]: The final strict format for the agent.
-      
-    IMPORTANT RULES:
-    1. You MUST output EXACTLY ONE choice for EACH category: Move, Turn, Shoot.
-    2. You CANNOT skip or invent choices. Use exactly the strings from the options list (e.g., 'Stay', 'Move forward'). Do not add any text or explanation after the action block.
-    
-    EXAMPLE FORMAT:
-      Reasoning:
-      - Current Situation: Enemy is at SLIGHT_RIGHT at MEDIUM distance. No wall ahead.
-      - Tactical Goal: Close the distance while rotating to center the enemy in FORWARD sight before firing.
-      - Action Selection: Turn right to start aligning with the enemy, and move forward at the same time since nothing blocks the path ahead; no need to strafe; hold fire until the enemy is centered.
-      - Consistency Check: FORWARD has no wall reported, so advancing is safe; the enemy is not yet centered, so firing now would miss.
-      Agent 0:
-        Move forward
-          Move forward
-        Move sideways
-          Stay
-        Turn
-          Turn right
-        Shoot
-          Don't shoot
- 
-    SECOND EXAMPLE (forward is open, do not retreat):
-      Reasoning:
-      - Current Situation: FORWARD shows a wall at MEDIUM range only (not blocking); BACK is blocked by walls on the left, center and right at CLOSE range.
-      - Tactical Goal: Forward is not blocked and the rear has no escape, so advance instead of reversing.
-      - Action Selection: Move forward to leave the area; no turn needed since forward is already open; no strafe needed since nothing forces a sideways dodge; hold fire since no enemy is aligned.
-      - Consistency Check: FORWARD is only MEDIUM, not IMMEDIATE/CLOSE, so 'Move forward' is correct; moving backward would push into the blocked rear I just described.
-      Agent 0:
-        Move forward
-          Move forward
-        Move sideways
-          Stay
-        Turn
-          Stay
-        Shoot
-          Don't shoot
+    [TACTICAL GUIDELINES]
+    - Navigation: when the path ahead is open, go straight: move forward without turning. Turn only to face a wider
+      opening, an enemy or a health pickup, and stop turning once it is directly ahead. If the wall directly ahead
+      is immediate, turn or strafe toward the more open side, and keep turning the same way until the path opens.
+      Standing completely still is rarely useful.
+    - Distances are coarse: while you walk along a long corridor the view can stay the same for several steps,
+      and that is normal progress. A repeated view is a problem only if walls at immediate or close range stay
+      the same while you keep trying to move: then try something different.
+    - Combat: turn until the enemy is directly ahead before shooting, and keep strafing while you fire: enemies
+      aim at you, so a moving target is harder to hit. Keep some distance from hover bots instead of rushing them.
+      Turrets cannot move: use the corridor walls to get out of their line of fire, or approach them while strafing.
+    - Survival: when your life is low, look for health pickups and avoid close fights.
 
-  history_length: 2
-  model_name: gpt-oss-20b
-  task: Choose the best action for current game state in order explore the game states and win the game.
-  actions: 
+    [OUTPUT FORMAT]
+    Plain text, no markdown. Start directly with "Reasoning:", keep it brief, then write the Agent block and
+    nothing after it. Use exactly the option strings listed in the ACTION SET.
+    Reasoning:
+    - Current Situation: what you see and what the history tells you.
+    - Tactical Goal: what you need to achieve now.
+    - Action Selection: why your four choices achieve it.
+    - Consistency Check: confirm the choices do not contradict the situation.
+    Agent 0:
+      Move forward
+        <option>
+      Move sideways
+        <option>
+      Turn
+        <option>
+      Shoot
+        <option>
+
+    [EXAMPLE]
+    Reasoning:
+    - Current Situation: Hover bot slightly right at medium range, corridor walls on the far sides at close range, path ahead open.
+    - Tactical Goal: Bring the hover bot directly ahead without standing still in its line of fire.
+    - Action Selection: Turn right to align, strafe left to make its shots miss, keep the distance; no shot until it is directly ahead.
+    - Consistency Check: The enemy is not directly ahead yet, so shooting would miss; nothing blocks my movement.
+    Agent 0:
+      Move forward
+        Stay
+      Move sideways
+        Move left
+      Turn
+        Turn right
+      Shoot
+        Don't shoot
+
+  history_length: 3
+  model_name: mistral-small:24b
+  task: Explore the map, find and destroy the enemies, and stay alive.
+  actions:
     discrete:
       - name: Move forward
         options: [Stay, Move forward, Move backward]
         description: >
-          Move the character forward or backward.
+          Walk forward or backward along your facing direction.
       - name: Move sideways
         options: [Stay, Move right, Move left]
         description: >
-          Move the character right or left.
+          Strafe right or left without changing your facing direction.
       - name: Turn
         options: [Stay, Turn right, Turn left]
         description: >
-          Turn the direction which the character is facing.
+          Rotate your facing direction without moving.
       - name: Shoot
         options: [Don't shoot, Shoot]
         description: >
-          Shoot a projectile in the direction which the character is facing.
+          Fire straight ahead; it hits only an enemy directly ahead.
   default_agent_action: |
       Agent 0:
-        Move
+        Move forward
           Move forward
+        Move sideways
+          Stay
         Turn
           Stay
         Shoot
-          Don't shoot  
+          Don't shoot
   use_visual_obs: False
   use_vectorial_obs: True
   use_grid_obs: False
   use_raycast_obs: True
   num_agents: 1
+  # Vector observation (PlayerAgent.CollectObservations): [0] health ratio, [1] under fire (0/1). Same set for RL and LLM.
   obs_template: |
-    The player has {health} life. The percentual of ammo is {ammo}.
-  features: 
+    [Life]: {health} | [Under fire]: {under_fire} | [View]: {RAYCAST_FRONT}
+  features:
     vectorial:
       health:
         type: "BUCKET"
@@ -121,47 +133,44 @@ llm_settings:
           - label: "HEALTHY"
             min: 0.81
             max: 1.1
-      ammo:
+      # BUCKET instead of BOOL: _process_boolean does int() on a 1-element array, which fails with recent numpy
+      under_fire:
         type: "BUCKET"
-        indices: [0]
+        indices: [1]
         mapping:
-          - label: "CRITICAL"
+          - label: "NO"
             min: 0.0
-            max: 0.25
-          - label: "LOW"
-            min: 0.251
-            max: 0.50
-          - label: "MEDIUM"
+            max: 0.5
+          - label: "YES"
             min: 0.51
-            max: 0.80
-          - label: "FULL"
-            min: 0.81
             max: 1.1
     raycast:
       RAYCAST_FRONT:
+        # Same order as DetectableTags on the RayPerceptionSensor: Wall, HoverBot, Health, Turret
         detectable_tags:
           0: "WALL"
-          1: "ENEMY" 
-          2: "HEALTH"
-        num_detectable_tags: 3
-        num_rays: 15
-        # direzioni logiche
+          1: "HOVER BOT"
+          2: "HEALTH PICKUP"
+          3: "TURRET"
+        num_detectable_tags: 4
+        num_rays: 9   # RaysPerDirection 4, MaxRayDegrees 70: one ray per direction
         direction: [
-          LEFT, SLIGHT_LEFT, 
-          FORWARD, 
-          SLIGHT_RIGHT, RIGHT
-        ] # 7 direzioni logiche
+          FAR_LEFT, LEFT, "FRONT LEFT", SLIGHT_LEFT,
+          FORWARD,
+          SLIGHT_RIGHT, "FRONT RIGHT", RIGHT, FAR_RIGHT
+        ]
+        # RayLength 20, SphereCastRadius 0.3, sensor centred on the player.
+        # Wall surface ≈ frac*20 + 0.3 m; the player covers ~1.3 m per decision.
         distance:
-          - label: IMMEDIATE
+          - label: IMMEDIATE   # < ~1.5 m: collision at the next step
             min: 0.0
-            max: 0.2
-          - label: CLOSE
-            min: 0.2
-            max: 0.5
-          - label: MEDIUM
-            min: 0.5
-            max: 0.8
-          - label: FAR
-            min: 0.8   
+            max: 0.06
+          - label: CLOSE       # ~1.5-3 m
+            min: 0.06
+            max: 0.14
+          - label: MEDIUM      # ~3-7 m
+            min: 0.14
+            max: 0.34
+          - label: FAR         # > ~7 m
+            min: 0.34
             max: 1.1
-

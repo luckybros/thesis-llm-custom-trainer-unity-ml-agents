@@ -39,3 +39,4 @@ mlagents_train_two.py
 mlagents_train_DRL_LLM.py
 orchestrator.py
 random_agent.py
+!experiments/**/orchestrator.py

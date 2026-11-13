@@ -22,8 +22,8 @@ class LLMHashCache(LLMCache):
         "action",         
     ]
 
-    def __init__(self):
-        super().__init__()
+    def __init__(self, history_length: int = 1):
+        super().__init__(history_length)
         self.cache: Dict[str, Any] = {}
 
         if self.LOGGING_ENABLED:

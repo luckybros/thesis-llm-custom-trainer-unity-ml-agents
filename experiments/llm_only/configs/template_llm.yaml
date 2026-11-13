@@ -1,0 +1,93 @@
+# =============================================================================
+# TEMPLATE YAML LLM (letto dal server LLM): prompt, azioni, modello
+# Copia questo file (es. configs/mio_gioco_llm.yaml) e adattalo al tuo gioco.
+# Va in coppia con template_training.yaml (osservazioni da inviare).
+# Guida passo-passo: experiments/llm_only/GUIDA.md
+# =============================================================================
+llm_settings:
+  # --- Modello (Ollama) ------------------------------------------------------
+  model_name: qwen2.5:7b           # nome esatto da `ollama list`
+                                   # con osservazioni VISUAL serve un modello vision: qwen2.5vl:7b
+  model_kwargs:                    # opzionale, passato a ChatOllama
+    temperature: 0.2
+    num_ctx: 8192                  # contesto: aumentalo se il prompt e' lungo
+    keep_alive: 30m                # tiene il modello in memoria tra le chiamate
+    # reasoning: false             # solo per modelli "thinking" (qwen3): li rende piu' veloci
+  max_llm_retries: 3               # risposte non parsabili -> riprova, poi default_agent_action
+
+  # --- Prompt ----------------------------------------------------------------
+  game_desc: |
+    Descrivi il gioco: ambiente, obiettivo, nemici/oggetti, come si vince e si perde.
+  agent_role: |
+    You control the player. At each step you receive the observations and your recent history.
+    Choose one option for each action category.
+    Answer in plain text: a short "Reasoning:" and then the Agent block, nothing after it.
+    Agent 0:
+      Move
+        <option>
+      Jump
+        <option>
+  task: Explore the level and reach the goal.
+  history_length: 3                # quanti passi precedenti (osservazione -> azione) mettere nel prompt
+
+  # --- Azioni ----------------------------------------------------------------
+  # STESSO ORDINE dei branch discreti in OnActionReceived (Unity C#),
+  # e per ogni branch le options nello STESSO ORDINE degli indici (0, 1, 2, ...).
+  actions:
+    discrete:
+      - name: Move                 # branch 0
+        options: [Stay, Move forward, Move backward]
+        description: Move the character.
+      - name: Jump                 # branch 1
+        options: [Don't jump, Jump]
+        description: Jump.
+  # Usata se l'LLM non risponde in modo valido (stesso formato richiesto all'LLM)
+  default_agent_action: |
+    Agent 0:
+      Move
+        Move forward
+      Jump
+        Don't jump
+
+  # --- Quali osservazioni mettere nel prompt -----------------------------------
+  use_vectorial_obs: True          # testo generato da obs_template + features
+  use_raycast_obs: True
+  use_visual_obs: False            # True -> immagine della camera nel prompt (modello vision!)
+  use_grid_obs: False
+  num_agents: 1
+
+  # Testo dell'osservazione: {nome_feature} e {NOME_RAYCAST} vengono sostituiti
+  obs_template: |
+    Health: {health} | Grounded: {grounded} | Front view: {RAYCAST_FRONT}
+
+  # Conversione numeri -> etichette (indici = posizione nel vettore di CollectObservations)
+  features:
+    vectorial:
+      health:
+        type: BUCKET               # BUCKET | BOOL | ONE_HOT
+        indices: [0]
+        mapping:
+          - {label: LOW, min: 0.0, max: 0.33}
+          - {label: MEDIUM, min: 0.331, max: 0.66}
+          - {label: HIGH, min: 0.661, max: 1.1}
+      grounded:
+        type: BUCKET
+        indices: [1]
+        mapping:
+          - {label: "NO", min: 0.0, max: 0.5}
+          - {label: "YES", min: 0.51, max: 1.1}
+    raycast:
+      RAYCAST_FRONT:               # stesso nome usato in observation_types (YAML training)
+        detectable_tags:           # stesso ordine dei Detectable Tags del RayPerceptionSensor
+          0: WALL
+          1: ENEMY
+        num_detectable_tags: 2
+        num_rays: 5                # raggi totali = 2 * RaysPerDirection + 1
+        # Un'etichetta per raggio, nell'ordine in cui ML-Agents li produce:
+        # centrale, poi alternati destra/sinistra dal piu' vicino al centro al piu' esterno
+        direction: [FORWARD, SLIGHT_RIGHT, SLIGHT_LEFT, RIGHT, LEFT]
+        distance:                  # distanza normalizzata 0..1 (frazione di RayLength)
+          - {label: IMMEDIATE, min: 0.0, max: 0.1}
+          - {label: CLOSE, min: 0.1, max: 0.3}
+          - {label: MEDIUM, min: 0.3, max: 0.6}
+          - {label: FAR, min: 0.6, max: 1.1}

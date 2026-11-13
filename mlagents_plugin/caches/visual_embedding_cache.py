@@ -10,8 +10,8 @@ from mlagents_plugin.caches.llm_cache import LLMCache
 
 class VisualLLMEmbeddingCache(LLMCache):
 
-    def __init__(self):
-        super().__init__()
+    def __init__(self, history_length: int = 1):
+        super().__init__(history_length)
         self.D = 512
         self.device = "cuda" if torch.cuda.is_available() else ("mps" if torch.backends.mps.is_available() else "cpu")
         self.processor = AutoProcessor.from_pretrained("openai/clip-vit-base-patch32")
@@ -25,7 +25,6 @@ class VisualLLMEmbeddingCache(LLMCache):
         if not state:
             return 
         
-        print(f"visual state: {state}")
         emb = self._get_embedding(next(iter(state.values())))
         self.index.add(emb)
         self.cache.append(action)
@@ -35,7 +34,7 @@ class VisualLLMEmbeddingCache(LLMCache):
 
         visual_state = new_state.get("VISUAL", {})
 
-        if visual_state is None:
+        if not visual_state:
             return None
         
         if self.index.ntotal == 0:
